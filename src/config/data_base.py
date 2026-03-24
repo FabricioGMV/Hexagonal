@@ -15,6 +15,7 @@ def init_db(app):
     # ========== OPÇÃO 1: SQLite (Sem Docker) ==========
     # Banco de dados local, arquivo criado na pasta do projeto
     basedir = os.path.abspath(os.path.dirname(__file__))
+    #db_path = os.path.join(basedir, '..', '..', 'market_management.db')
     db_path = os.path.join(basedir, '..', '..', 'market_management.db')
     app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
     
