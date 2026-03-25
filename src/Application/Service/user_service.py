@@ -73,3 +73,41 @@ class UserService:
                 "codigo_ativacao": u.codigo_ativacao
             })
         return lista_usuarios
+    
+    # ======== MÉTODO PARA ATUALIZAR USUÁRIO ========
+    @staticmethod
+    def update_user(user_id, new_email=None, new_celular=None, new_password=None):
+        user = User.query.get(user_id)
+        if not user:
+            return None
+
+        if new_email:
+            user.email = new_email
+        if new_password:
+            user.password = new_password
+
+        if new_celular and new_celular != user.celular:
+            user.celular = new_celular
+            user.status = "Inativo"
+            
+            codigo = str(random.randint(1000, 9999))
+            user.codigo_ativacao = codigo
+            print(f"NOVO CÓDIGO GERADO PARA O WHATSAPP: {codigo}")
+            
+            try:
+                account_sid = os.getenv("TWILIO_ACCOUNT_SID")
+                auth_token = os.getenv("TWILIO_AUTH_TOKEN")
+                twilio_number = os.getenv("TWILIO_PHONE_NUMBER")
+                client = Client(account_sid, auth_token)
+
+                message = client.messages.create(
+                    from_=twilio_number, 
+                    body=f'Olá {user.name}! Seu número foi atualizado. Seu NOVO código do Mini Mercado é: {codigo}',
+                    to=f'whatsapp:{user.celular}'
+                )
+                print(f"Nova mensagem enviada! SID: {message.sid}")
+            except Exception as e:
+                print(f"Erro ao enviar WhatsApp na atualização: {e}")
+
+        db.session.commit()
+        return user

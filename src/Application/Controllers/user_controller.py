@@ -92,3 +92,46 @@ class UserController:
             }), 200)
         except Exception as e:
             return make_response(jsonify({"erro": f"Erro ao buscar usuários: {str(e)}"}), 500)
+        
+    # ======== MÉTODO PARA ATUALIZAR USUÁRIO ========
+    @staticmethod
+    def update_user(user_id):
+        data = request.get_json()
+        email = data.get('email')
+        celular = data.get('celular')
+        password = data.get('password')
+
+        if not email and not celular and not password:
+            return make_response(jsonify({"erro": "Pelo menos um campo deve ser fornecido para atualização."}), 400)
+
+        try:
+            user = UserService.update_user(user_id, email, celular, password)
+            if not user:
+                return make_response(jsonify({"erro": "Usuário não encontrado."}), 404)
+            
+            mensagem = "Usuário atualizado com sucesso."
+            if celular:
+                mensagem += " Número atualizado, conta inativada. Insira o código enviado pelo WhatsApp para reativar."
+
+            return make_response(jsonify({
+                "mensagem": mensagem,
+                "usuario": {
+                    "id": user.id,
+                    "name": user.name,
+                    "email": user.email,
+                    "celular": user.celular,
+                    "status": user.status
+                }
+            }), 200)
+        
+        except IntegrityError:
+            db.session.rollback()
+            return make_response(jsonify({
+                "erro": "Conflito de dados: O E-mail ou Celular informado já está em uso por outra conta."
+            }), 409)
+        
+        except Exception as e:
+            db.session.rollback()
+            return make_response(jsonify({
+                "erro": f"Erro ao atualizar usuário: {str(e)}"
+            }), 500)
