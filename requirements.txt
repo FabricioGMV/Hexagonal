@@ -5,3 +5,4 @@ SQLALchemy>=2.0
 mysql-connector-python
 Twilio>=7.0.0
 Flask-JWT-Extended
+python-dotenv
