@@ -8,9 +8,31 @@ def init_routes(app):
             "mensagem": "API - OK; Docker - Up",
         }), 200)
     
-    @app.route('/user', methods=['POST'])
+    #@app.route('/users', methods=['GET'])
+    #def list_all_users():
+        #return UserController.get_all_users()
+    
+    #@app.route('/user', methods=['POST'])
+    #def register_user():
+        #return UserController.register_user()
+
+    @app.route('/listar', methods=['GET'])
+    def list_all_users():
+        return UserController.get_all_users()
+    
+    @app.route('/criar', methods=['POST'])
     def register_user():
         return UserController.register_user()
     
-    
+    @app.route('/ativar', methods=['POST'])
+    def activate_user():
+        return UserController.activate_account()
 
+    @app.route('/login', methods=['POST'])
+    def login_user():
+        return UserController.login()
+    
+    @app.route('/atualizar/id=<int:user_id>', methods=['PUT'])
+    def update_user(user_id):
+        #user_id = request.args.get('id') //Padrão de mercado (RESTful) para passar o ID do recurso na URL
+        return UserController.update_user(user_id)
