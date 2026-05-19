@@ -3,11 +3,31 @@ from src.Infrastructure.Model.user import User
 from src.config.data_base import db
 from twilio.rest import Client 
 from dotenv import load_dotenv
+from flask import jsonify, make_response
 import random
 import os
 
-
 class UserService:
+    # ======== MÉTODO REUTILIZÁVEL PARA ENVIAR WHATSAPP ========
+    @staticmethod
+    def _enviar_whatsapp(celular, mensagem):
+        try:
+            account_sid = os.getenv("TWILIO_ACCOUNT_SID")
+            auth_token = os.getenv("TWILIO_AUTH_TOKEN")
+            twilio_number = os.getenv("TWILIO_PHONE_NUMBER")
+            client = Client(account_sid, auth_token)
+
+            message = client.messages.create(
+                from_=twilio_number, 
+                body=mensagem,
+                to=f'whatsapp:{celular}'
+            )
+            print(f"Mensagem enviada via WhatsApp! SID: {message.sid}")
+            return True
+        except Exception as e:
+            print(f"Erro ao enviar WhatsApp: {e}")
+            return False
+
     # ======== MÉTODO PARA CRIAR USUÁRIO ========
     @staticmethod
     def create_user(name, cnpj, email, celular, password, status="Inativo"):        
@@ -16,7 +36,7 @@ class UserService:
             cnpj=cnpj,
             email=email,
             celular=celular,
-            password=password,
+            password=password, # No futuro, ideal é hashear a senha
             status=status
         )
         db.session.add(user)
@@ -26,21 +46,9 @@ class UserService:
         print(f"CÓDIGO GERADO PARA O WHATSAPP: {codigo}")
         db.session.commit()
 
-        # ======== INTEGRAÇÃO TWILIO ========
-        try:
-            account_sid = os.getenv("TWILIO_ACCOUNT_SID")
-            auth_token = os.getenv("TWILIO_AUTH_TOKEN")
-            twilio_number = os.getenv("TWILIO_PHONE_NUMBER")
-            client = Client(account_sid, auth_token)
-
-            message = client.messages.create(
-                from_=twilio_number, 
-                body=f'Olá {name}! Seu código de ativação do Mini Mercado é: {codigo}',
-                to=f'whatsapp:{celular}'
-            )
-            print(f"Mensagem enviada! SID: {message.sid}")
-        except Exception as e:
-            print(f"Erro ao enviar WhatsApp: {e}")
+        # Usando a função reutilizável
+        mensagem = f'Olá {name}! Seu código de ativação do Mini Mercado é: {codigo}'
+        UserService._enviar_whatsapp(celular, mensagem)
 
         return UserDomain(user.id, user.name, user.cnpj, user.email, user.celular, user.password)
     
@@ -53,8 +61,8 @@ class UserService:
             user.status = "Ativo"
             user.codigo_ativacao = None
             db.session.commit()
-            return True
-        return False
+            return user
+        return None
     
     # ======== MÉTODO PARA LISTAR USUÁRIOS ========
     @staticmethod
@@ -94,20 +102,45 @@ class UserService:
             user.codigo_ativacao = codigo
             print(f"NOVO CÓDIGO GERADO PARA O WHATSAPP: {codigo}")
             
-            try:
-                account_sid = os.getenv("TWILIO_ACCOUNT_SID")
-                auth_token = os.getenv("TWILIO_AUTH_TOKEN")
-                twilio_number = os.getenv("TWILIO_PHONE_NUMBER")
-                client = Client(account_sid, auth_token)
-
-                message = client.messages.create(
-                    from_=twilio_number, 
-                    body=f'Olá {user.name}! Seu número foi atualizado. Seu NOVO código do Mini Mercado é: {codigo}',
-                    to=f'whatsapp:{user.celular}'
-                )
-                print(f"Nova mensagem enviada! SID: {message.sid}")
-            except Exception as e:
-                print(f"Erro ao enviar WhatsApp na atualização: {e}")
+            # Usando a função reutilizável
+            mensagem = f'Olá {user.name}! Seu número foi atualizado. Seu NOVO código do Mini Mercado é: {codigo}'
+            UserService._enviar_whatsapp(user.celular, mensagem)
 
         db.session.commit()
         return user
+
+    # ======== MÉTODOS PARA REDEFINIÇÃO DE SENHA ========
+    @staticmethod
+    def solicitar_redefinir_senha(email):
+        user = User.query.filter_by(email=email).first()
+        if not user:
+            return make_response(jsonify({"erro": "Nenhum usuário encontrado com este e-mail."}), 404)
+
+        # Gera código de 4 dígitos para manter seu padrão
+        codigo = str(random.randint(1000, 9999))
+        user.codigo_ativacao = codigo
+        db.session.commit()
+
+        mensagem = f"Olá {user.name}! Seu código para recuperar a senha do Mini Mercado é: {codigo}"
+        enviado = UserService._enviar_whatsapp(user.celular, mensagem)
+        
+        if enviado:
+            return make_response(jsonify({"mensagem": "Código de recuperação enviado ao seu WhatsApp!"}), 200)
+        else:
+            return make_response(jsonify({"erro": "Erro ao tentar enviar o código via WhatsApp."}), 500)
+
+    @staticmethod
+    def confirmar_redefinir_senha(email, codigo, nova_senha):
+        user = User.query.filter_by(email=email).first()
+        if not user:
+            return make_response(jsonify({"erro": "Usuário não encontrado."}), 404)
+
+        if user.codigo_ativacao != codigo:
+            return make_response(jsonify({"erro": "Código de verificação inválido ou expirado."}), 400)
+
+        # Atualiza a senha e limpa o código
+        user.password = nova_senha
+        user.codigo_ativacao = None
+        db.session.commit()
+
+        return make_response(jsonify({"mensagem": "Senha alterada com sucesso!"}), 200)

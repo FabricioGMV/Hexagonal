@@ -1,0 +1,250 @@
+{% extends "base.html" %}
+
+{% block content %}
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4 rounded">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="/dashboard">Mini Mercado</a>
+        <div class="collapse navbar-collapse">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item"><a class="nav-link" href="/dashboard">Dashboard</a></li>
+                <li class="nav-item"><a class="nav-link active" href="/produtos">Produtos</a></li>
+                <li class="nav-item"><a class="nav-link" href="/vendas">Vendas</a></li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4>Meus Produtos</h4>
+    <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalNovoProduto">
+        + Novo Produto
+    </button>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>Nome</th>
+                        <th>Preço Unit/Kg</th>
+                        <th>Estoque Atual</th>
+                        <th>Status</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="tabela-produtos">
+                    <tr><td colspan="6" class="text-center py-3">Carregando produtos...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalNovoProduto" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Cadastrar Novo Produto</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="prod-alert" class="alert d-none"></div>
+                <form id="formProduto">
+                    <div class="row">
+                        <div class="col-md-8 mb-3">
+                            <label>Nome do Produto</label>
+                            <input type="text" id="nome_produto" class="form-control" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label>Preço (R$)</label>
+                            <input type="number" step="0.01" id="preco_produto" class="form-control" required>
+                        </div>
+                    </div>
+
+                    <div class="row border-top pt-3 mt-2">
+                        <div class="col-12 mb-2">
+                            <label class="fw-bold">Tipo de Venda:</label>
+                            <div class="form-check form-check-inline ms-3">
+                                <input class="form-check-input" type="radio" name="tipoVenda" id="tipoUnitario" value="unidade" checked>
+                                <label class="form-check-label" for="tipoUnitario">Unitário (Qtd, Pacote, Lata)</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="tipoVenda" id="tipoPeso" value="peso">
+                                <label class="form-check-label" for="tipoPeso">Peso/A Granel (Kg, Gramas)</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row bg-light p-3 rounded mt-2">
+                        <div class="col-md-6 mb-3">
+                            <label id="label_estoque_qtd">Estoque Atual (Qtd em Unidades)</label>
+                            <input type="number" step="0.01" id="estoque_quantidade" class="form-control" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label id="label_estoque_un">Unidade do Estoque</label>
+                            <select id="estoque_unidade_id" class="form-select" required>
+                                <option value="1">Unidade (un)</option>
+                                <option value="2">Quilograma (kg)</option>
+                                <option value="4">Litro (L)</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label>Conteúdo da Embalagem</label>
+                            <input type="number" step="0.01" id="conteudo_quantidade" class="form-control" placeholder="Ex: 350">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label>Unidade do Conteúdo</label>
+                            <select id="conteudo_unidade_id" class="form-select">
+                                <option value="">Selecione...</option>
+                                <option value="4">Mililitros (ml)</option>
+                                <option value="2">Gramas (g)</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="text-end mt-3">
+                        <button type="submit" class="btn btn-primary">Salvar Produto</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const token = localStorage.getItem('token');
+if (!token) window.location.href = '/';
+
+const formatarBRL = (valor) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
+
+// Lógica Interativa: Peso vs Unitário
+const tipoUnitario = document.getElementById('tipoUnitario');
+const tipoPeso = document.getElementById('tipoPeso');
+const inputConteudoQtd = document.getElementById('conteudo_quantidade');
+const selectConteudoUn = document.getElementById('conteudo_unidade_id');
+const selectEstoqueUn = document.getElementById('estoque_unidade_id');
+const labelEstoqueQtd = document.getElementById('label_estoque_qtd');
+const labelEstoqueUn = document.getElementById('label_estoque_un');
+
+function toggleTipoVenda() {
+    if (tipoPeso.checked) {
+        inputConteudoQtd.value = '';
+        inputConteudoQtd.disabled = true;
+        selectConteudoUn.value = '';
+        selectConteudoUn.disabled = true;
+        
+        labelEstoqueQtd.textContent = "Estoque Atual (Ex: 10 para 10kg)";
+        selectEstoqueUn.value = "2"; // Seta para Kg
+        
+    } else {
+        inputConteudoQtd.disabled = false;
+        selectConteudoUn.disabled = false;
+        labelEstoqueQtd.textContent = "Estoque Atual (Qtd em Unidades)";
+        selectEstoqueUn.value = "1"; // Seta para Unidade
+    }
+}
+
+tipoUnitario.addEventListener('change', toggleTipoVenda);
+tipoPeso.addEventListener('change', toggleTipoVenda);
+
+// Carregar Produtos
+async function carregarProdutos() {
+    const response = await fetch('/api/produtos', {
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+    
+    if(response.ok) {
+        const produtos = await response.json();
+        const tbody = document.getElementById('tabela-produtos');
+        tbody.innerHTML = '';
+        
+        if (produtos.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center">Nenhum produto cadastrado.</td></tr>';
+            return;
+        }
+
+        produtos.forEach(p => {
+            const statusBadge = p.status === 'Ativo' 
+                ? '<span class="badge bg-success">Ativo</span>' 
+                : '<span class="badge bg-danger">Inativo</span>';
+            
+            const btnInativar = p.status === 'Ativo' 
+                ? `<button class="btn btn-sm btn-outline-danger" onclick="inativar(${p.id})">Inativar</button>` 
+                : '';
+
+            tbody.innerHTML += `
+                <tr>
+                    <td>#${p.id}</td>
+                    <td>
+                        <strong>${p.nome}</strong><br>
+                        <small class="text-muted">Cód: ${p.codigo_barras}</small>
+                    </td>
+                    <td>${formatarBRL(p.preco)}</td>
+                    <td>${p.estoque_quantidade}</td>
+                    <td>${statusBadge}</td>
+                    <td>${btnInativar}</td>
+                </tr>
+            `;
+        });
+    }
+}
+
+// Cadastrar Produto
+document.getElementById('formProduto').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const payload = {
+        nome: document.getElementById('nome_produto').value,
+        preco: parseFloat(document.getElementById('preco_produto').value),
+        estoque_quantidade: parseFloat(document.getElementById('estoque_quantidade').value),
+        estoque_unidade_id: parseInt(document.getElementById('estoque_unidade_id').value),
+        conteudo_quantidade: inputConteudoQtd.value ? parseFloat(inputConteudoQtd.value) : null,
+        conteudo_unidade_id: selectConteudoUn.value ? parseInt(selectConteudoUn.value) : null
+    };
+
+    const response = await fetch('/api/produtos', {
+        method: 'POST',
+        headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}` 
+        },
+        body: JSON.stringify(payload)
+    });
+
+    if (response.ok) {
+        // Fecha modal, limpa form e recarrega lista
+        const modalEl = document.getElementById('modalNovoProduto');
+        const modalInstance = bootstrap.Modal.getInstance(modalEl);
+        modalInstance.hide();
+        document.getElementById('formProduto').reset();
+        toggleTipoVenda(); // Reseta os campos desabilitados
+        carregarProdutos();
+    } else {
+        const data = await response.json();
+        const alertBox = document.getElementById('prod-alert');
+        alertBox.className = 'alert alert-danger';
+        alertBox.textContent = data.erro;
+        alertBox.classList.remove('d-none');
+    }
+});
+
+// Inativar Produto
+async function inativar(id) {
+    if(confirm('Tem certeza que deseja inativar este produto? Ele não poderá ser vendido.')) {
+        await fetch(`/api/produtos/${id}/inativar`, {
+            method: 'PUT',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        carregarProdutos();
+    }
+}
+
+document.addEventListener('DOMContentLoaded', carregarProdutos);
+</script>
+{% endblock %}

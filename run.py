@@ -1,22 +1,27 @@
+import os
 from flask import Flask
 from src.config.data_base import init_db
 from src.routes import init_routes
 from flask_jwt_extended import JWTManager
-import os
 from dotenv import load_dotenv
 
 load_dotenv()
 
 def create_app():
-    """
-    Função que cria e configura a aplicação Flask.
-    """
-    app = Flask(__name__)
+    app = Flask(__name__,
+                template_folder='templates',
+                static_folder='static')
+
+    # HARDCODE THE KEY FOR NOW TO TEST
+    #app.config["JWT_SECRET_KEY"] = "minha_chave_super_secreta_e_gigante_para_o_mercado_12345"
     app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY")
+    
     jwt = JWTManager(app)
 
+    # Inicializa o banco de dados (Cria pastas e tabelas)
     init_db(app)
 
+    # Configura mapeamento de rotas
     init_routes(app)
 
     return app
@@ -24,4 +29,4 @@ def create_app():
 app = create_app()
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, port=5000)
