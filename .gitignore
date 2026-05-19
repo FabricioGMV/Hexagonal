@@ -20,3 +20,6 @@ env/
 
 .env
 __pycache__/
+
+src/static/uploads/*
+!app/static/uploads/.gitkeep
