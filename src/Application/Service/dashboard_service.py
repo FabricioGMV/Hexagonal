@@ -28,8 +28,9 @@ class DashboardService:
         lista_ultimas_vendas = []
         
         for v in ultimas_vendas:
-            # Pega o nome do primeiro produto para resumir na tabela, ou mostra "Múltiplos itens"
             itens = VendaItem.query.filter_by(venda_id=v.id).all()
+            
+            # Monta o resumo para a tabela principal
             if len(itens) == 1:
                 prod = Produto.query.get(itens[0].produto_id)
                 resumo_produtos = prod.nome if prod else "Produto Excluído"
@@ -38,11 +39,29 @@ class DashboardService:
             else:
                 resumo_produtos = "Nenhum item"
 
+            # Monta os detalhes dos itens para o Modal de Nota Fiscal
+            detalhes_itens = []
+            for item in itens:
+                prod = Produto.query.get(item.produto_id)
+                nome_produto = prod.nome if prod else "Produto Excluído"
+                
+                # Assume que sua tabela VendaItem tem a coluna preco_unitario guardada
+                subtotal = item.quantidade * item.preco_unitario
+                
+                detalhes_itens.append({
+                    "id_produto": item.produto_id,
+                    "descricao": nome_produto,
+                    "quantidade": item.quantidade,
+                    "preco_unitario": item.preco_unitario,
+                    "subtotal": subtotal
+                })
+
             lista_ultimas_vendas.append({
                 "id": v.id,
                 "produto_resumo": resumo_produtos,
                 "valor_total": v.valor_total,
-                "data_venda": v.data_venda.strftime('%d/%m/%Y %H:%M')
+                "data_venda": v.data_venda.strftime('%d/%m/%Y %H:%M'),
+                "itens_detalhados": detalhes_itens # Lista nova sendo enviada para o Front!
             })
 
         return {
