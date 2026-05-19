@@ -69,14 +69,53 @@
                         <th>Produto(s)</th>
                         <th>Data/Hora</th>
                         <th>Valor Total</th>
+                        <th class="text-center">Ações</th>
                     </tr>
                 </thead>
                 <tbody id="tabela-vendas">
                     <tr>
-                        <td colspan="4" class="text-center py-3">Carregando dados...</td>
+                        <td colspan="5" class="text-center py-3">Carregando dados...</td>
                     </tr>
                 </tbody>
             </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalDetalhesVenda" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title">Detalhes da Venda - #<span id="nf-id"></span></h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted mb-3"><strong>Realizada em:</strong> <span id="nf-data"></span></p>
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>ID Prod.</th>
+                                <th>Descrição (Nome)</th>
+                                <th class="text-center">Unidades</th>
+                                <th class="text-end">Valor Un.</th>
+                                <th class="text-end">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody id="nf-itens">
+                            </tbody>
+                        <tfoot>
+                            <tr>
+                                <th colspan="4" class="text-end fs-6">Valor Total da Venda:</th>
+                                <th id="nf-total" class="text-end text-success fw-bold fs-6"></th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
         </div>
     </div>
 </div>
@@ -86,14 +125,13 @@
 <script>
 // 1. Verificação de Segurança Front-end
 const token = localStorage.getItem('token');
-if (!token) {
-    window.location.href = '/'; // Expulsa para o login se não houver token
-}
+if (!token) window.location.href = '/';
+
+// Variável global para armazenar as vendas na tela
+let ultimasVendasGlobais = [];
 
 // 2. Formatar moeda
-const formatarBRL = (valor) => {
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
-};
+const formatarBRL = (valor) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
 
 // 3. Função de Logout
 function logout() {
@@ -103,26 +141,16 @@ function logout() {
 
 // 4. Carregar Dados da API
 async function carregarDashboard() {
-
-    // === CERTIFIQUE-SE DE QUE ESTA LINHA EXISTE ABAIXO ===
-    const token = localStorage.getItem('token'); 
-    console.log("4. Token recuperado pelo Dashboard para a requisição:", token);
-
     try {
         const response = await fetch('/api/dashboard', {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}` // Envia o JWT no cabeçalho
+                'Authorization': `Bearer ${token}`
             }
         });
 
-        // === A MÁGICA DO DEBUG COMEÇA AQUI ===
         if (response.status === 401 || response.status === 403) {
-            const errorData = await response.json();
-            console.error("❌ O Flask bloqueou o acesso! Motivo exato:", errorData);
-            
-            // PODE DESCOMENTAR AS LINHAS ABAIXO:
             logout();
             return;
         }
@@ -130,18 +158,21 @@ async function carregarDashboard() {
         const data = await response.json();
 
         if (response.ok) {
+            // Guarda as vendas para usar no modal depois
+            ultimasVendasGlobais = data.ultimas_vendas;
+
             // Preenche os indicadores
             document.getElementById('ind-produtos').textContent = data.total_produtos;
             document.getElementById('ind-estoque').textContent = formatarBRL(data.valor_estoque);
             document.getElementById('ind-vendas').textContent = formatarBRL(data.total_vendas_rs);
             document.getElementById('ind-itens').textContent = data.total_itens_vendidos;
 
-            // Preenche a tabela
+            // Preenche a tabela principal
             const tbody = document.getElementById('tabela-vendas');
-            tbody.innerHTML = ''; // Limpa o "Carregando..."
+            tbody.innerHTML = '';
 
             if (data.ultimas_vendas.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" class="text-center">Nenhuma venda registrada ainda.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center">Nenhuma venda registrada ainda.</td></tr>';
             } else {
                 data.ultimas_vendas.forEach(venda => {
                     const tr = document.createElement('tr');
@@ -150,6 +181,9 @@ async function carregarDashboard() {
                         <td>${venda.produto_resumo}</td>
                         <td>${venda.data_venda}</td>
                         <td class="fw-bold text-success">${formatarBRL(venda.valor_total)}</td>
+                        <td class="text-center">
+                            <button class="btn btn-sm btn-outline-primary" onclick="abrirDetalhesVenda(${venda.id})">🔍 Visualizar</button>
+                        </td>
                     `;
                     tbody.appendChild(tr);
                 });
@@ -160,7 +194,39 @@ async function carregarDashboard() {
     }
 }
 
-// Inicia a carga de dados assim que a página renderizar
+// 5. Função para abrir o modal de NF
+function abrirDetalhesVenda(idVenda) {
+    // Procura a venda clicada na nossa lista global
+    const venda = ultimasVendasGlobais.find(v => v.id === idVenda);
+    if (!venda) return;
+
+    // Preenche cabeçalho e rodapé do Modal
+    document.getElementById('nf-id').textContent = venda.id;
+    document.getElementById('nf-data').textContent = venda.data_venda;
+    document.getElementById('nf-total').textContent = formatarBRL(venda.valor_total);
+
+    // Preenche os itens da venda
+    const tbodyItens = document.getElementById('nf-itens');
+    tbodyItens.innerHTML = '';
+
+    venda.itens_detalhados.forEach(item => {
+        tbodyItens.innerHTML += `
+            <tr>
+                <td>#${item.id_produto}</td>
+                <td>${item.descricao}</td>
+                <td class="text-center">${item.quantidade}</td>
+                <td class="text-end">${formatarBRL(item.preco_unitario)}</td>
+                <td class="text-end fw-bold">${formatarBRL(item.subtotal)}</td>
+            </tr>
+        `;
+    });
+
+    // Abre o Modal
+    const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modalDetalhesVenda'));
+    modal.show();
+}
+
+// Inicia a carga de dados
 document.addEventListener('DOMContentLoaded', carregarDashboard);
 </script>
 {% endblock %}
