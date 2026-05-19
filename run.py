@@ -12,8 +12,6 @@ def create_app():
                 template_folder='templates',
                 static_folder='static')
 
-    # HARDCODE THE KEY FOR NOW TO TEST
-    #app.config["JWT_SECRET_KEY"] = "minha_chave_super_secreta_e_gigante_para_o_mercado_12345"
     app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY")
     
     jwt = JWTManager(app)

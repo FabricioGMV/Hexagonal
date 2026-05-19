@@ -8,19 +8,12 @@ class Produto(db.Model):
     nome = db.Column(db.String(100), nullable=False)
     preco = db.Column(db.Float, nullable=False)
     estoque_quantidade = db.Column(db.Float, nullable=False)
-    
-    # Chaves Estrangeiras para Unidades
     estoque_unidade_id = db.Column(db.Integer, db.ForeignKey('unidades.id'), nullable=False)
     conteudo_quantidade = db.Column(db.Float, nullable=True) # Pode ser nulo se for vendido a granel/peso
     conteudo_unidade_id = db.Column(db.Integer, db.ForeignKey('unidades.id'), nullable=True)
-    
-    # RN4 - Status Inicial: Todo produto novo cadastrado deve vir automaticamente como Ativo (True)
     status = db.Column(db.Boolean, default=True, nullable=False) 
-    
     imagem_path = db.Column(db.String(255), nullable=True)
     codigo_barras = db.Column(db.String(20), unique=True, nullable=False)
-    
-    # Relacionamento com o Vendedor (Um Seller gerencia só os seus)
     seller_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
 
     def __init__(self, **kwargs):
@@ -35,7 +28,11 @@ class Produto(db.Model):
             "nome": self.nome,
             "preco": self.preco,
             "estoque_quantidade": self.estoque_quantidade,
+            "estoque_unidade_id": self.estoque_unidade_id,
+            "conteudo_quantidade": self.conteudo_quantidade,
+            "conteudo_unidade_id": self.conteudo_unidade_id,
             "status": "Ativo" if self.status else "Inativo",
             "codigo_barras": self.codigo_barras,
+            "imagem_path": self.imagem_path,
             "seller_id": self.seller_id
         }

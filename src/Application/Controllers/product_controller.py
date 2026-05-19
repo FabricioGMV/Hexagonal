@@ -1,19 +1,59 @@
-from flask import request, jsonify, make_response
+from flask import request, jsonify, make_response, current_app
 from flask_jwt_extended import get_jwt_identity
 from src.Application.Service.product_service import ProductService
+import os
+import random
+from werkzeug.utils import secure_filename
 
 class ProductController:
     @staticmethod
     def criar_produto():
         seller_id = get_jwt_identity()
-        data = request.get_json()
+        
+        nome = request.form.get('nome')
+        preco = request.form.get('preco')
+        estoque_quantidade = request.form.get('estoque_quantidade')
+        estoque_unidade_id = request.form.get('estoque_unidade_id')
+        conteudo_quantidade = request.form.get('conteudo_quantidade')
+        conteudo_unidade_id = request.form.get('conteudo_unidade_id')
+        
+        imagem = request.files.get('imagem')
 
         try:
-            # Validação básica
-            if not data.get('nome') or not data.get('preco') or not data.get('estoque_quantidade') or not data.get('estoque_unidade_id'):
-                return make_response(jsonify({"erro": "Campos obrigatórios faltando."}), 400)
+            if not nome or not preco or not estoque_quantidade or not estoque_unidade_id or not imagem:
+                return make_response(jsonify({"erro": "Todos os campos obrigatórios e a imagem devem ser informados."}), 400)
 
-            produto = ProductService.criar_produto(data, seller_id)
+            # ==========================================
+            # CORREÇÃO DO CAMINHO DA IMAGEM
+            # ==========================================
+            # O current_app.static_folder acha a pasta oficial do Flask automaticamente
+            upload_folder = os.path.join(current_app.static_folder, 'uploads')
+            
+            if not os.path.exists(upload_folder):
+                os.makedirs(upload_folder)
+
+            prefixo = str(random.randint(1000, 9999))
+            filename = secure_filename(f"seller_{seller_id}_{prefixo}_{imagem.filename}")
+            filepath = os.path.join(upload_folder, filename)
+            
+            # Salva a imagem no lugar exato que o Flask espera
+            imagem.save(filepath)
+            
+            # URL que o front-end vai usar
+            imagem_url = f"/static/uploads/{filename}"
+            # ==========================================
+
+            dados = {
+                "nome": nome,
+                "preco": float(preco),
+                "estoque_quantidade": float(estoque_quantidade),
+                "estoque_unidade_id": int(estoque_unidade_id),
+                "conteudo_quantidade": float(conteudo_quantidade) if conteudo_quantidade else None,
+                "conteudo_unidade_id": int(conteudo_unidade_id) if conteudo_unidade_id else None,
+                "imagem_path": imagem_url
+            }
+
+            produto = ProductService.criar_produto(dados, seller_id)
             return make_response(jsonify({
                 "mensagem": "Produto cadastrado com sucesso!",
                 "produto": produto.to_dict()
@@ -40,3 +80,52 @@ class ProductController:
             return make_response(jsonify({"erro": "Produto não encontrado ou não pertence a você."}), 404)
         except Exception as e:
             return make_response(jsonify({"erro": str(e)}), 500)
+        
+    @staticmethod
+    def atualizar_produto(produto_id):
+        seller_id = get_jwt_identity()
+        
+        nome = request.form.get('nome')
+        preco = request.form.get('preco')
+        estoque_quantidade = request.form.get('estoque_quantidade')
+        estoque_unidade_id = request.form.get('estoque_unidade_id')
+        conteudo_quantidade = request.form.get('conteudo_quantidade')
+        conteudo_unidade_id = request.form.get('conteudo_unidade_id')
+        
+        imagem = request.files.get('imagem')
+
+        dados = {}
+        if nome: dados['nome'] = nome
+        if preco: dados['preco'] = float(preco)
+        if estoque_quantidade: dados['estoque_quantidade'] = float(estoque_quantidade)
+        if estoque_unidade_id: dados['estoque_unidade_id'] = int(estoque_unidade_id)
+        
+        # Tratamento especial para permitir salvar como null se o usuário mudou para "Peso"
+        dados['conteudo_quantidade'] = float(conteudo_quantidade) if conteudo_quantidade and conteudo_quantidade.strip() != '' else None
+        dados['conteudo_unidade_id'] = int(conteudo_unidade_id) if conteudo_unidade_id and conteudo_unidade_id.strip() != '' else None
+
+        # Se o usuário mandou uma imagem nova, salvamos
+        if imagem and imagem.filename != '':
+            upload_folder = os.path.join(current_app.static_folder, 'uploads')
+            if not os.path.exists(upload_folder):
+                os.makedirs(upload_folder)
+            
+            import random
+            from werkzeug.utils import secure_filename
+            prefixo = str(random.randint(1000, 9999))
+            filename = secure_filename(f"seller_{seller_id}_{prefixo}_{imagem.filename}")
+            filepath = os.path.join(upload_folder, filename)
+            imagem.save(filepath)
+            dados['imagem_path'] = f"/static/uploads/{filename}"
+
+        try:
+            produto = ProductService.atualizar_produto(produto_id, seller_id, dados)
+            if not produto:
+                return make_response(jsonify({"erro": "Produto não encontrado."}), 404)
+            
+            return make_response(jsonify({
+                "mensagem": "Produto atualizado com sucesso!",
+                "produto": produto.to_dict()
+            }), 200)
+        except Exception as e:
+            return make_response(jsonify({"erro": f"Erro ao atualizar produto: {str(e)}"}), 500)

@@ -4,6 +4,7 @@ from src.Application.Controllers.product_controller import ProductController
 from src.Application.Controllers.venda_controller import VendaController
 from src.Application.Service.auth_decorator import seller_required
 from flask import jsonify, make_response
+from flask_jwt_extended import jwt_required
 from flask import render_template
 
 def init_routes(app):
@@ -84,6 +85,12 @@ def init_routes(app):
     @seller_required()
     def inativar_produto(produto_id):
         return ProductController.inativar_produto(produto_id)
+    
+    # Provavelmente você tem algo parecido com isso no seu arquivo de rotas:
+    @app.route('/api/produtos/<int:produto_id>', methods=['PUT'])
+    @jwt_required()
+    def atualizar_produto(produto_id):
+        return ProductController.atualizar_produto(produto_id)
     
     @app.route('/api/vendas', methods=['POST'])
     @seller_required()
