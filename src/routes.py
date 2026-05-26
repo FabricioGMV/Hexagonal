@@ -30,6 +30,14 @@ def init_routes(app):
     def page_vendas():
         return render_template('vendas/index.html')
     
+    @app.route('/perfil')
+    def page_perfil():
+        return render_template('perfil/perfil.html')
+
+    @app.route('/perfil/atualizar')
+    def page_perfil_atualizar():
+        return render_template('perfil/atualizar.html')
+    
     # ======== ROTAS DE API (BACK-END) ========
 
     @app.route('/listar', methods=['GET'])
@@ -53,11 +61,6 @@ def init_routes(app):
     def page_redefinir():
         return render_template('auth/redefinir.html')
     
-    @app.route('/atualizar/id=<int:user_id>', methods=['PUT'])
-    def update_user(user_id):
-        #user_id = request.args.get('id') //Padrão de mercado (RESTful) para passar o ID do recurso na URL
-        return UserController.update_user(user_id)
-    
     @app.route('/api/redefinir/solicitar', methods=['POST'])
     def solicitar_redefinir_senha():
         return UserController.solicitar_redefinir_senha()
@@ -67,7 +70,7 @@ def init_routes(app):
         return UserController.confirmar_redefinir_senha()
     
     @app.route('/api/dashboard', methods=['GET'])
-    @seller_required() # Protege a rota: só usuários logados e ativos acessam
+    @seller_required()
     def api_dashboard():
         return DashboardController.get_dashboard_data()
     
@@ -86,7 +89,6 @@ def init_routes(app):
     def inativar_produto(produto_id):
         return ProductController.inativar_produto(produto_id)
     
-    # Provavelmente você tem algo parecido com isso no seu arquivo de rotas:
     @app.route('/api/produtos/<int:produto_id>', methods=['PUT'])
     @jwt_required()
     def atualizar_produto(produto_id):
@@ -96,3 +98,13 @@ def init_routes(app):
     @seller_required()
     def realizar_venda():
         return VendaController.realizar_venda()
+    
+    @app.route('/api/vendedor/dados', methods=['GET'])
+    @seller_required()
+    def obter_dados_vendedor():
+        return UserController.obter_dados_vendedor()
+
+    @app.route('/atualizar/id=<int:user_id>', methods=['PUT'])
+    @jwt_required()
+    def update_user(user_id):
+        return UserController.update_user(user_id)

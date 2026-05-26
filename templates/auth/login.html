@@ -15,7 +15,10 @@
                     </div>
                     <div class="mb-3">
                         <label>Senha</label>
-                        <input type="password" id="password" class="form-control" required>
+                        <div class="input-group">
+                            <input type="password" id="password" class="form-control" required>
+                            <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('password', this)" tabindex="-1">👁️</button>
+                        </div>
                     </div>
                     <button type="submit" class="btn btn-primary w-100">Entrar no Dashboard</button>
                 </form>
@@ -34,6 +37,17 @@
 
 {% block scripts %}
 <script>
+function togglePassword(inputId, btn) {
+    const input = document.getElementById(inputId);
+    if (input.type === 'password') {
+        input.type = 'text';
+        btn.textContent = '🙈';
+    } else {
+        input.type = 'password';
+        btn.textContent = '👁️';
+    }
+}
+
 document.getElementById('loginForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const email = document.getElementById('email').value;
@@ -50,20 +64,17 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
         const data = await response.json();
 
         if (response.ok) {
-            // === ADICIONE ESTES DOIS LOGS AQUI ===
             console.log("1. Resposta completa do servidor no login:", data);
             console.log("2. Tentando salvar o token:", data.token);
             
-            // Salva o JWT para ser usado nas requisições do Dashboard
             localStorage.setItem('token', data.token);
             
-            // === ADICIONE ESTE LOG PARA CONFIRMAR A GRAVAÇÃO ===
             console.log("3. Token gravado com sucesso no LocalStorage:", localStorage.getItem('token'));
-            
             window.location.href = '/dashboard';
         } else {
             alertBox.className = 'alert alert-danger';
             alertBox.textContent = data.erro || 'Erro ao realizar login.';
+            alertBox.classList.remove('d-none');
         }
     } catch (error) {
         console.error('Erro:', error);

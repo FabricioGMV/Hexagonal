@@ -14,7 +14,7 @@
                 <li class="nav-item"><a class="nav-link" href="/vendas">Vendas</a></li>
             </ul>
             <ul class="navbar-nav">
-                <li class="nav-item"><a class="nav-link" href="#">Perfil</a></li>
+                <li class="nav-item"><a class="nav-link" href="/perfil">Perfil</a></li>
                 <li class="nav-item"><a class="nav-link text-danger" href="#" onclick="logout()">Sair</a></li>
             </ul>
         </div>
@@ -123,110 +123,95 @@
 
 {% block scripts %}
 <script>
-// 1. Verificação de Segurança Front-end
-const token = localStorage.getItem('token');
-if (!token) window.location.href = '/';
+    const token = localStorage.getItem('token');
+    if (!token) window.location.href = '/';
 
-// Variável global para armazenar as vendas na tela
-let ultimasVendasGlobais = [];
+    let ultimasVendasGlobais = [];
+    const formatarBRL = (valor) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
 
-// 2. Formatar moeda
-const formatarBRL = (valor) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
+    function logout() {
+        localStorage.removeItem('token');
+        window.location.href = '/';
+    }
 
-// 3. Função de Logout
-function logout() {
-    localStorage.removeItem('token');
-    window.location.href = '/';
-}
+    async function carregarDashboard() {
+        try {
+            const response = await fetch('/api/dashboard', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
 
-// 4. Carregar Dados da API
-async function carregarDashboard() {
-    try {
-        const response = await fetch('/api/dashboard', {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
+            if (response.status === 401 || response.status === 403) {
+                logout();
+                return;
             }
+
+            const data = await response.json();
+
+            if (response.ok) {
+                ultimasVendasGlobais = data.ultimas_vendas;
+
+                document.getElementById('ind-produtos').textContent = data.total_produtos;
+                document.getElementById('ind-estoque').textContent = formatarBRL(data.valor_estoque);
+                document.getElementById('ind-vendas').textContent = formatarBRL(data.total_vendas_rs);
+                document.getElementById('ind-itens').textContent = data.total_itens_vendidos;
+
+                const tbody = document.getElementById('tabela-vendas');
+                tbody.innerHTML = '';
+
+                if (data.ultimas_vendas.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="text-center">Nenhuma venda registrada ainda.</td></tr>';
+                } else {
+                    data.ultimas_vendas.forEach(venda => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>#${venda.id}</td>
+                            <td>${venda.produto_resumo}</td>
+                            <td>${venda.data_venda}</td>
+                            <td class="fw-bold text-success">${formatarBRL(venda.valor_total)}</td>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-outline-primary" onclick="abrirDetalhesVenda(${venda.id})">🔍 Visualizar</button>
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                }
+            }
+        } catch (error) {
+            console.error("Erro ao buscar dados do dashboard:", error);
+        }
+    }
+
+    function abrirDetalhesVenda(idVenda) {
+        const venda = ultimasVendasGlobais.find(v => v.id === idVenda);
+        if (!venda) return;
+
+        document.getElementById('nf-id').textContent = venda.id;
+        document.getElementById('nf-data').textContent = venda.data_venda;
+        document.getElementById('nf-total').textContent = formatarBRL(venda.valor_total);
+
+        const tbodyItens = document.getElementById('nf-itens');
+        tbodyItens.innerHTML = '';
+
+        venda.itens_detalhados.forEach(item => {
+            tbodyItens.innerHTML += `
+                <tr>
+                    <td>#${item.id_produto}</td>
+                    <td>${item.descricao}</td>
+                    <td class="text-center">${item.quantidade}</td>
+                    <td class="text-end">${formatarBRL(item.preco_unitario)}</td>
+                    <td class="text-end fw-bold">${formatarBRL(item.subtotal)}</td>
+                </tr>
+            `;
         });
 
-        if (response.status === 401 || response.status === 403) {
-            logout();
-            return;
-        }
-
-        const data = await response.json();
-
-        if (response.ok) {
-            // Guarda as vendas para usar no modal depois
-            ultimasVendasGlobais = data.ultimas_vendas;
-
-            // Preenche os indicadores
-            document.getElementById('ind-produtos').textContent = data.total_produtos;
-            document.getElementById('ind-estoque').textContent = formatarBRL(data.valor_estoque);
-            document.getElementById('ind-vendas').textContent = formatarBRL(data.total_vendas_rs);
-            document.getElementById('ind-itens').textContent = data.total_itens_vendidos;
-
-            // Preenche a tabela principal
-            const tbody = document.getElementById('tabela-vendas');
-            tbody.innerHTML = '';
-
-            if (data.ultimas_vendas.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="text-center">Nenhuma venda registrada ainda.</td></tr>';
-            } else {
-                data.ultimas_vendas.forEach(venda => {
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `
-                        <td>#${venda.id}</td>
-                        <td>${venda.produto_resumo}</td>
-                        <td>${venda.data_venda}</td>
-                        <td class="fw-bold text-success">${formatarBRL(venda.valor_total)}</td>
-                        <td class="text-center">
-                            <button class="btn btn-sm btn-outline-primary" onclick="abrirDetalhesVenda(${venda.id})">🔍 Visualizar</button>
-                        </td>
-                    `;
-                    tbody.appendChild(tr);
-                });
-            }
-        }
-    } catch (error) {
-        console.error("Erro ao buscar dados do dashboard:", error);
+        const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modalDetalhesVenda'));
+        modal.show();
     }
-}
 
-// 5. Função para abrir o modal de NF
-function abrirDetalhesVenda(idVenda) {
-    // Procura a venda clicada na nossa lista global
-    const venda = ultimasVendasGlobais.find(v => v.id === idVenda);
-    if (!venda) return;
-
-    // Preenche cabeçalho e rodapé do Modal
-    document.getElementById('nf-id').textContent = venda.id;
-    document.getElementById('nf-data').textContent = venda.data_venda;
-    document.getElementById('nf-total').textContent = formatarBRL(venda.valor_total);
-
-    // Preenche os itens da venda
-    const tbodyItens = document.getElementById('nf-itens');
-    tbodyItens.innerHTML = '';
-
-    venda.itens_detalhados.forEach(item => {
-        tbodyItens.innerHTML += `
-            <tr>
-                <td>#${item.id_produto}</td>
-                <td>${item.descricao}</td>
-                <td class="text-center">${item.quantidade}</td>
-                <td class="text-end">${formatarBRL(item.preco_unitario)}</td>
-                <td class="text-end fw-bold">${formatarBRL(item.subtotal)}</td>
-            </tr>
-        `;
-    });
-
-    // Abre o Modal
-    const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modalDetalhesVenda'));
-    modal.show();
-}
-
-// Inicia a carga de dados
-document.addEventListener('DOMContentLoaded', carregarDashboard);
+    document.addEventListener('DOMContentLoaded', carregarDashboard);
 </script>
 {% endblock %}

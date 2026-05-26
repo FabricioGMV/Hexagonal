@@ -1,6 +1,6 @@
 from flask import request, jsonify, make_response
 from src.Application.Service.user_service import UserService
-from flask_jwt_extended import create_access_token
+from flask_jwt_extended import create_access_token, get_jwt_identity
 from src.Infrastructure.Model.user import User
 from sqlalchemy.exc import IntegrityError
 from src.config.data_base import db
@@ -108,3 +108,53 @@ class UserController:
             return make_response(jsonify({"erro": "Todos os campos são obrigatórios."}), 400)
             
         return UserService.confirmar_redefinir_senha(email, codigo, nova_senha)
+    
+    @staticmethod
+    def obter_dados_vendedor():
+        try:
+            # Pega o ID do usuário logado através do token
+            user_id = get_jwt_identity()
+            user = User.query.get(user_id)
+            
+            if not user:
+                return make_response(jsonify({"erro": "Usuário não encontrado."}), 404)
+                
+            return make_response(jsonify({
+                "id": user.id,
+                "name": user.name,
+                "email": user.email,
+                "celular": user.celular,
+                "cnpj": user.cnpj
+            }), 200)
+        except Exception as e:
+            return make_response(jsonify({"erro": f"Erro interno: {str(e)}"}), 500)
+
+    @staticmethod
+    def update_user(user_id):
+        # Proteção: O usuário só pode editar o próprio ID
+        user_logado_id = get_jwt_identity()
+        if str(user_id) != str(user_logado_id):
+            return make_response(jsonify({"erro": "Acesso negado para editar este perfil."}), 403)
+
+        data = request.get_json()
+        user = User.query.get(user_id)
+        
+        if not user:
+            return make_response(jsonify({"erro": "Usuário não encontrado."}), 404)
+
+        # Atualiza os dados apenas se foram enviados no corpo da requisição
+        if 'name' in data: user.name = data['name']
+        if 'email' in data: user.email = data['email']
+        if 'celular' in data: user.celular = data['celular']
+        if 'password' in data and data['password'].strip() != "":
+            user.password = data['password'] 
+
+        try:
+            db.session.commit()
+            return make_response(jsonify({"mensagem": "Perfil atualizado com sucesso!"}), 200)
+        except IntegrityError:
+            db.session.rollback()
+            return make_response(jsonify({"erro": "E-mail ou Celular já estão em uso."}), 409)
+        except Exception as e:
+            db.session.rollback()
+            return make_response(jsonify({"erro": f"Erro interno: {str(e)}"}), 500)
