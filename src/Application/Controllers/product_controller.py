@@ -23,10 +23,6 @@ class ProductController:
             if not nome or not preco or not estoque_quantidade or not estoque_unidade_id or not imagem:
                 return make_response(jsonify({"erro": "Todos os campos obrigatórios e a imagem devem ser informados."}), 400)
 
-            # ==========================================
-            # CORREÇÃO DO CAMINHO DA IMAGEM
-            # ==========================================
-            # O current_app.static_folder acha a pasta oficial do Flask automaticamente
             upload_folder = os.path.join(current_app.static_folder, 'uploads')
             
             if not os.path.exists(upload_folder):
@@ -36,12 +32,9 @@ class ProductController:
             filename = secure_filename(f"seller_{seller_id}_{prefixo}_{imagem.filename}")
             filepath = os.path.join(upload_folder, filename)
             
-            # Salva a imagem no lugar exato que o Flask espera
             imagem.save(filepath)
             
-            # URL que o front-end vai usar
             imagem_url = f"/static/uploads/{filename}"
-            # ==========================================
 
             dados = {
                 "nome": nome,
@@ -100,11 +93,9 @@ class ProductController:
         if estoque_quantidade: dados['estoque_quantidade'] = float(estoque_quantidade)
         if estoque_unidade_id: dados['estoque_unidade_id'] = int(estoque_unidade_id)
         
-        # Tratamento especial para permitir salvar como null se o usuário mudou para "Peso"
         dados['conteudo_quantidade'] = float(conteudo_quantidade) if conteudo_quantidade and conteudo_quantidade.strip() != '' else None
         dados['conteudo_unidade_id'] = int(conteudo_unidade_id) if conteudo_unidade_id and conteudo_unidade_id.strip() != '' else None
 
-        # Se o usuário mandou uma imagem nova, salvamos
         if imagem and imagem.filename != '':
             upload_folder = os.path.join(current_app.static_folder, 'uploads')
             if not os.path.exists(upload_folder):

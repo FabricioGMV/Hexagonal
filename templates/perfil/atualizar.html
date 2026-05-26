@@ -105,7 +105,6 @@
             userId = data.id;
             document.getElementById('upd-nome').value = data.name;
             document.getElementById('upd-email').value = data.email;
-            // Preenche já formatando para a máscara ficar certinha na tela
             document.getElementById('upd-celular').value = formatPhoneNumber(data.celular);
         }
     }
@@ -129,7 +128,6 @@
         const payload = {
             name: document.getElementById('upd-nome').value,
             email: document.getElementById('upd-email').value,
-            // Limpa o dado para enviar apenas números e sinal de +
             celular: document.getElementById('upd-celular').value.replace(/[^\d+]/g, '')
         };
 

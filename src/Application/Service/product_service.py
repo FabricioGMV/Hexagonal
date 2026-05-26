@@ -37,19 +37,16 @@ class ProductService:
         if not produto:
             return None
         
-        # Atualiza os dados, mantendo os antigos se não for enviado nada novo
         produto.nome = dados.get('nome', produto.nome)
         produto.preco = dados.get('preco', produto.preco)
         produto.estoque_quantidade = dados.get('estoque_quantidade', produto.estoque_quantidade)
         produto.estoque_unidade_id = dados.get('estoque_unidade_id', produto.estoque_unidade_id)
         
-        # Se mudar para peso, o conteúdo pode vir nulo (limpando o valor antigo)
         if 'conteudo_quantidade' in dados:
             produto.conteudo_quantidade = dados['conteudo_quantidade']
         if 'conteudo_unidade_id' in dados:
             produto.conteudo_unidade_id = dados['conteudo_unidade_id']
             
-        # Atualiza a imagem apenas se uma nova foi enviada
         if dados.get('imagem_path'):
             produto.imagem_path = dados.get('imagem_path')
 

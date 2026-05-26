@@ -44,8 +44,6 @@ class DashboardService:
             for item in itens:
                 prod = Produto.query.get(item.produto_id)
                 nome_produto = prod.nome if prod else "Produto Excluído"
-                
-                # Assume que sua tabela VendaItem tem a coluna preco_unitario guardada
                 subtotal = item.quantidade * item.preco_unitario
                 
                 detalhes_itens.append({
@@ -61,7 +59,7 @@ class DashboardService:
                 "produto_resumo": resumo_produtos,
                 "valor_total": v.valor_total,
                 "data_venda": v.data_venda.strftime('%d/%m/%Y %H:%M'),
-                "itens_detalhados": detalhes_itens # Lista nova sendo enviada para o Front!
+                "itens_detalhados": detalhes_itens
             })
 
         return {

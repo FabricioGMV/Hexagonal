@@ -9,7 +9,6 @@ class Venda(db.Model):
     data_venda = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     valor_total = db.Column(db.Float, nullable=False, default=0.0)
 
-    # Relacionamento para acessar os itens facilmente
     itens = db.relationship('VendaItem', backref='venda', lazy=True, cascade="all, delete-orphan")
 
     def to_dict(self):

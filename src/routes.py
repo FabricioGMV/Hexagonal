@@ -10,30 +10,37 @@ from flask import render_template
 def init_routes(app):
     # ======== ROTAS WEB (FRONT-END) ========
 
+    #1. Rota inicial (página de login)
     @app.route('/')
     def index():
         return render_template('auth/login.html')
 
+    #2. Rota de cadastro (página de cadastro)
     @app.route('/cadastro')
     def page_cadastro():
         return render_template('auth/cadastro.html')
     
+    #3. Rota de dashboard (página de dashboard)
     @app.route('/dashboard')
     def page_dashboard():
         return render_template('dashboard/index.html')
     
+    #4. Rota de produtos (página de produtos)
     @app.route('/produtos')
     def page_produtos():
         return render_template('produtos/index.html')
     
+    #5. Rota de vendas (página de vendas)
     @app.route('/vendas')
     def page_vendas():
         return render_template('vendas/index.html')
     
+    #6. Rota de perfil (página de perfil)
     @app.route('/perfil')
     def page_perfil():
         return render_template('perfil/perfil.html')
 
+    #7. Rota de atualizar perfil (página de atualização de perfil)
     @app.route('/perfil/atualizar')
     def page_perfil_atualizar():
         return render_template('perfil/atualizar.html')

@@ -82,168 +82,165 @@
 
 {% block scripts %}
 <script>
-const token = localStorage.getItem('token');
-if (!token) window.location.href = '/';
+    const token = localStorage.getItem('token');
+    if (!token) window.location.href = '/';
 
-const formatarBRL = (valor) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
+    const formatarBRL = (valor) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
 
-let produtosDisponiveis = [];
-let carrinho = [];
+    let produtosDisponiveis = [];
+    let carrinho = [];
 
-// 1. Carregar produtos ativos para o Select
-async function carregarProdutosParaVenda() {
-    const response = await fetch('/api/produtos', {
-        headers: { 'Authorization': `Bearer ${token}` }
-    });
-    
-    if (response.ok) {
-        const produtos = await response.json();
-        // Filtra apenas ativos e com estoque maior que zero
-        produtosDisponiveis = produtos.filter(p => p.status === 'Ativo' && p.estoque_quantidade > 0);
-        
-        const select = document.getElementById('select_produto');
-        select.innerHTML = '<option value="">Selecione um produto...</option>';
-        
-        produtosDisponiveis.forEach(p => {
-            select.innerHTML += `<option value="${p.id}">
-                ${p.nome} - ${formatarBRL(p.preco)} (Estoque: ${p.estoque_quantidade})
-            </option>`;
+    // 1. Carregar produtos ativos para o Select
+    async function carregarProdutosParaVenda() {
+        const response = await fetch('/api/produtos', {
+            headers: { 'Authorization': `Bearer ${token}` }
         });
-    }
-}
-
-// 2. Adicionar item ao Carrinho
-function adicionarItem() {
-    const select = document.getElementById('select_produto');
-    const produtoId = parseInt(select.value);
-    const quantidade = parseFloat(document.getElementById('quantidade').value);
-    const alertBox = document.getElementById('venda-alert');
-    
-    if (!produtoId || !quantidade || quantidade <= 0) return;
-
-    const produto = produtosDisponiveis.find(p => p.id === produtoId);
-    
-    // Validação de estoque no Front-end (RN2)
-    const qtdNoCarrinho = carrinho.filter(i => i.produto_id === produtoId).reduce((acc, curr) => acc + curr.quantidade, 0);
-    if ((qtdNoCarrinho + quantidade) > produto.estoque_quantidade) {
-        alertBox.className = 'alert alert-warning';
-        alertBox.textContent = `Estoque insuficiente. Restam apenas ${produto.estoque_quantidade} ${produto.nome}(s).`;
-        alertBox.classList.remove('d-none');
-        setTimeout(() => alertBox.classList.add('d-none'), 3000);
-        return;
-    }
-
-    // Verifica se já existe no carrinho para somar a quantidade
-    const itemExistente = carrinho.find(i => i.produto_id === produtoId);
-    if (itemExistente) {
-        itemExistente.quantidade += quantidade;
-        itemExistente.subtotal = itemExistente.quantidade * produto.preco;
-    } else {
-        carrinho.push({
-            produto_id: produto.id,
-            nome: produto.nome,
-            quantidade: quantidade,
-            preco: produto.preco,
-            subtotal: quantidade * produto.preco
-        });
-    }
-
-    // Reseta input
-    document.getElementById('quantidade').value = 1;
-    select.value = "";
-    
-    renderizarCarrinho();
-}
-
-// 3. Remover item do Carrinho
-function removerItem(index) {
-    carrinho.splice(index, 1);
-    renderizarCarrinho();
-}
-
-// 4. Limpar todo o Carrinho
-function limparCarrinho() {
-    carrinho = [];
-    renderizarCarrinho();
-}
-
-// 5. Renderizar tabela do carrinho e atualizar totais
-function renderizarCarrinho() {
-    const tbody = document.getElementById('tabela-carrinho');
-    const btnFinalizar = document.getElementById('btnFinalizar');
-    const totalDisplay = document.getElementById('total-venda');
-    
-    tbody.innerHTML = '';
-    let valorTotal = 0;
-
-    if (carrinho.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4">O carrinho está vazio</td></tr>';
-        totalDisplay.textContent = 'R$ 0,00';
-        btnFinalizar.disabled = true;
-        return;
-    }
-
-    carrinho.forEach((item, index) => {
-        valorTotal += item.subtotal;
-        tbody.innerHTML += `
-            <tr>
-                <td>${item.nome}</td>
-                <td>${item.quantidade}</td>
-                <td>${formatarBRL(item.preco)}</td>
-                <td class="fw-bold">${formatarBRL(item.subtotal)}</td>
-                <td>
-                    <button class="btn btn-sm btn-outline-danger" onclick="removerItem(${index})">X</button>
-                </td>
-            </tr>
-        `;
-    });
-
-    totalDisplay.textContent = formatarBRL(valorTotal);
-    btnFinalizar.disabled = false;
-}
-
-// 6. Finalizar Venda e enviar para a API
-async function finalizarVenda() {
-    const btnFinalizar = document.getElementById('btnFinalizar');
-    btnFinalizar.disabled = true;
-    btnFinalizar.textContent = 'Processando...';
-
-    // Monta o payload no formato que o Back-end espera
-    const payload = {
-        carrinho: carrinho.map(item => ({
-            produto_id: item.produto_id,
-            quantidade: item.quantidade
-        }))
-    };
-
-    try {
-        const response = await fetch('/api/vendas', {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify(payload)
-        });
-
-        const data = await response.json();
         
-        if (response.status === 201) {
-            alert('Venda registrada com sucesso!');
-            limparCarrinho();
-            carregarProdutosParaVenda(); // Recarrega os produtos para atualizar o estoque na tela
-        } else {
-            alert(`Erro: ${data.erro}`);
+        if (response.ok) {
+            const produtos = await response.json();
+            produtosDisponiveis = produtos.filter(p => p.status === 'Ativo' && p.estoque_quantidade > 0);
+            
+            const select = document.getElementById('select_produto');
+            select.innerHTML = '<option value="">Selecione um produto...</option>';
+            
+            produtosDisponiveis.forEach(p => {
+                select.innerHTML += `<option value="${p.id}">
+                    ${p.nome} - ${formatarBRL(p.preco)} (Estoque: ${p.estoque_quantidade})
+                </option>`;
+            });
         }
-    } catch (error) {
-        alert('Erro ao processar a venda.');
-    } finally {
-        btnFinalizar.textContent = 'Finalizar Venda';
-        renderizarCarrinho(); // Retorna o estado do botão
     }
-}
 
-// Inicia tela carregando produtos
-document.addEventListener('DOMContentLoaded', carregarProdutosParaVenda);
+    // 2. Adicionar item ao Carrinho
+    function adicionarItem() {
+        const select = document.getElementById('select_produto');
+        const produtoId = parseInt(select.value);
+        const quantidade = parseFloat(document.getElementById('quantidade').value);
+        const alertBox = document.getElementById('venda-alert');
+        
+        if (!produtoId || !quantidade || quantidade <= 0) return;
+
+        const produto = produtosDisponiveis.find(p => p.id === produtoId);
+        
+        // Validação de estoque no Front-end (RN2)
+        const qtdNoCarrinho = carrinho.filter(i => i.produto_id === produtoId).reduce((acc, curr) => acc + curr.quantidade, 0);
+        if ((qtdNoCarrinho + quantidade) > produto.estoque_quantidade) {
+            alertBox.className = 'alert alert-warning';
+            alertBox.textContent = `Estoque insuficiente. Restam apenas ${produto.estoque_quantidade} ${produto.nome}(s).`;
+            alertBox.classList.remove('d-none');
+            setTimeout(() => alertBox.classList.add('d-none'), 3000);
+            return;
+        }
+
+        // Verifica se já existe no carrinho para somar a quantidade
+        const itemExistente = carrinho.find(i => i.produto_id === produtoId);
+        if (itemExistente) {
+            itemExistente.quantidade += quantidade;
+            itemExistente.subtotal = itemExistente.quantidade * produto.preco;
+        } else {
+            carrinho.push({
+                produto_id: produto.id,
+                nome: produto.nome,
+                quantidade: quantidade,
+                preco: produto.preco,
+                subtotal: quantidade * produto.preco
+            });
+        }
+
+        // Reseta input
+        document.getElementById('quantidade').value = 1;
+        select.value = "";
+        
+        renderizarCarrinho();
+    }
+
+    // 3. Remover item do Carrinho
+    function removerItem(index) {
+        carrinho.splice(index, 1);
+        renderizarCarrinho();
+    }
+
+    // 4. Limpar todo o Carrinho
+    function limparCarrinho() {
+        carrinho = [];
+        renderizarCarrinho();
+    }
+
+    // 5. Renderizar tabela do carrinho e atualizar totais
+    function renderizarCarrinho() {
+        const tbody = document.getElementById('tabela-carrinho');
+        const btnFinalizar = document.getElementById('btnFinalizar');
+        const totalDisplay = document.getElementById('total-venda');
+        
+        tbody.innerHTML = '';
+        let valorTotal = 0;
+
+        if (carrinho.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4">O carrinho está vazio</td></tr>';
+            totalDisplay.textContent = 'R$ 0,00';
+            btnFinalizar.disabled = true;
+            return;
+        }
+
+        carrinho.forEach((item, index) => {
+            valorTotal += item.subtotal;
+            tbody.innerHTML += `
+                <tr>
+                    <td>${item.nome}</td>
+                    <td>${item.quantidade}</td>
+                    <td>${formatarBRL(item.preco)}</td>
+                    <td class="fw-bold">${formatarBRL(item.subtotal)}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-danger" onclick="removerItem(${index})">X</button>
+                    </td>
+                </tr>
+            `;
+        });
+
+        totalDisplay.textContent = formatarBRL(valorTotal);
+        btnFinalizar.disabled = false;
+    }
+
+    // 6. Finalizar Venda e enviar para a API
+    async function finalizarVenda() {
+        const btnFinalizar = document.getElementById('btnFinalizar');
+        btnFinalizar.disabled = true;
+        btnFinalizar.textContent = 'Processando...';
+
+        const payload = {
+            carrinho: carrinho.map(item => ({
+                produto_id: item.produto_id,
+                quantidade: item.quantidade
+            }))
+        };
+
+        try {
+            const response = await fetch('/api/vendas', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await response.json();
+            
+            if (response.status === 201) {
+                alert('Venda registrada com sucesso!');
+                limparCarrinho();
+                carregarProdutosParaVenda();
+            } else {
+                alert(`Erro: ${data.erro}`);
+            }
+        } catch (error) {
+            alert('Erro ao processar a venda.');
+        } finally {
+            btnFinalizar.textContent = 'Finalizar Venda';
+            renderizarCarrinho();
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', carregarProdutosParaVenda);
 </script>
 {% endblock %}

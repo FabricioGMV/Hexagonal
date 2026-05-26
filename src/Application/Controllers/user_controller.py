@@ -41,11 +41,9 @@ class UserController:
         if not email or not code:
             return make_response(jsonify({"erro": "Email e código são obrigatórios"}), 400)
 
-        # Agora retorna a instância do usuário autenticado
         user_activated = UserService.verify_code(email, code)
 
         if user_activated:
-            # GERAÇÃO DO BEARER TOKEN IMEDIATAMENTE NA ATIVAÇÃO SUCEDIDA
             access_token = create_access_token(identity=str(user_activated.id))
             return make_response(jsonify({
                 "mensagem": "Conta ativada com sucesso!",
@@ -68,7 +66,6 @@ class UserController:
         if user.status != "Ativo":
             return make_response(jsonify({"erro": "Conta inativa. Ative via código enviado ao seu WhatsApp."}), 403)
 
-        #access_token = create_access_token(identity=user.id)
         access_token = create_access_token(identity=str(user.id))
         return make_response(jsonify({
             "mensagem": "Login realizado com sucesso",
@@ -112,7 +109,6 @@ class UserController:
     @staticmethod
     def obter_dados_vendedor():
         try:
-            # Pega o ID do usuário logado através do token
             user_id = get_jwt_identity()
             user = User.query.get(user_id)
             
@@ -131,7 +127,6 @@ class UserController:
 
     @staticmethod
     def update_user(user_id):
-        # Proteção: O usuário só pode editar o próprio ID
         user_logado_id = get_jwt_identity()
         if str(user_id) != str(user_logado_id):
             return make_response(jsonify({"erro": "Acesso negado para editar este perfil."}), 403)
@@ -142,7 +137,6 @@ class UserController:
         if not user:
             return make_response(jsonify({"erro": "Usuário não encontrado."}), 404)
 
-        # Atualiza os dados apenas se foram enviados no corpo da requisição
         if 'name' in data: user.name = data['name']
         if 'email' in data: user.email = data['email']
         if 'celular' in data: user.celular = data['celular']

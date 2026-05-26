@@ -88,7 +88,6 @@
         window.location.href = '/';
     }
 
-    // --- FUNÇÕES DE FORMATAÇÃO VISUAL ---
     function formatPhoneNumber(v) {
         if (!v) return "";
         v = String(v).replace(/\D/g, ''); 
@@ -108,7 +107,6 @@
         if (!match) return v;
         return !match[2] ? match[1] : match[1] + '.' + match[2] + (match[3] ? '.' : '') + match[3] + (match[4] ? '/' : '') + match[4] + (match[5] ? '-' + match[5] : '');
     }
-    // ------------------------------------
 
     async function carregarPerfil() {
         try {
@@ -127,8 +125,6 @@
                 document.getElementById('lbl-nome').textContent = data.name;
                 document.getElementById('lbl-id').textContent = data.id;
                 document.getElementById('lbl-email').textContent = data.email;
-                
-                // Aplica a máscara antes de exibir na tela
                 document.getElementById('lbl-celular').textContent = formatPhoneNumber(data.celular);
                 document.getElementById('lbl-cnpj').textContent = formatCNPJ(data.cnpj);
                 

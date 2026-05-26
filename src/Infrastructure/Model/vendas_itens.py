@@ -7,7 +7,7 @@ class VendaItem(db.Model):
     venda_id = db.Column(db.Integer, db.ForeignKey('vendas.id'), nullable=False)
     produto_id = db.Column(db.Integer, db.ForeignKey('produtos.id'), nullable=False)
     quantidade = db.Column(db.Float, nullable=False)
-    preco_unitario = db.Column(db.Float, nullable=False) # Preço congelado no momento da venda
+    preco_unitario = db.Column(db.Float, nullable=False)
     subtotal = db.Column(db.Float, nullable=False)
 
     def to_dict(self):

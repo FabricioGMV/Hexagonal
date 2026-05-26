@@ -36,7 +36,7 @@ class UserService:
             cnpj=cnpj,
             email=email,
             celular=celular,
-            password=password, # No futuro, ideal é hashear a senha
+            password=password,
             status=status
         )
         db.session.add(user)
@@ -102,7 +102,6 @@ class UserService:
             user.codigo_ativacao = codigo
             print(f"NOVO CÓDIGO GERADO PARA O WHATSAPP: {codigo}")
             
-            # Usando a função reutilizável
             mensagem = f'Olá {user.name}! Seu número foi atualizado. Seu NOVO código do Mini Mercado é: {codigo}'
             UserService._enviar_whatsapp(user.celular, mensagem)
 
@@ -138,7 +137,6 @@ class UserService:
         if user.codigo_ativacao != codigo:
             return make_response(jsonify({"erro": "Código de verificação inválido ou expirado."}), 400)
 
-        # Atualiza a senha e limpa o código
         user.password = nova_senha
         user.codigo_ativacao = None
         db.session.commit()

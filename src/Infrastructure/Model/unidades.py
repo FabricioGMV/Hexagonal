@@ -6,7 +6,7 @@ class Unidade(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     nome = db.Column(db.String(50), nullable=False)
     sigla = db.Column(db.String(10), nullable=False, unique=True)
-    tipo = db.Column(db.String(30), nullable=False) # Ex: unidade, massa, volume
+    tipo = db.Column(db.String(30), nullable=False)
 
     def to_dict(self):
         return {

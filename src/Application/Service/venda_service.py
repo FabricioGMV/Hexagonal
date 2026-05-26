@@ -11,7 +11,7 @@ class VendaService:
         """
         nova_venda = Venda(seller_id=seller_id, valor_total=0.0)
         db.session.add(nova_venda)
-        db.session.flush() # Para obter o ID da venda antes de commitar
+        db.session.flush()
 
         valor_total_venda = 0.0
 

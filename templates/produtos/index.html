@@ -267,318 +267,314 @@
 
 {% block scripts %}
 <script>
-const token = localStorage.getItem('token');
-if (!token) window.location.href = '/';
+    const token = localStorage.getItem('token');
+    if (!token) window.location.href = '/';
 
-const formatarBRL = (valor) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
-let todosOsProdutos = [];
+    const formatarBRL = (valor) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
+    let todosOsProdutos = [];
 
-// ==========================================
-// LÓGICA DE UNIDADE: CADASTRO
-// ==========================================
-const tipoUnitario = document.getElementById('tipoUnitario');
-const tipoPeso = document.getElementById('tipoPeso');
-const inputConteudoQtd = document.getElementById('conteudo_quantidade');
-const selectConteudoUn = document.getElementById('conteudo_unidade_id');
-const selectEstoqueUn = document.getElementById('estoque_unidade_id');
-const labelEstoqueQtd = document.getElementById('label_estoque_qtd');
+    // ==========================================
+    // LÓGICA DE UNIDADE: CADASTRO
+    // ==========================================
+    const tipoUnitario = document.getElementById('tipoUnitario');
+    const tipoPeso = document.getElementById('tipoPeso');
+    const inputConteudoQtd = document.getElementById('conteudo_quantidade');
+    const selectConteudoUn = document.getElementById('conteudo_unidade_id');
+    const selectEstoqueUn = document.getElementById('estoque_unidade_id');
+    const labelEstoqueQtd = document.getElementById('label_estoque_qtd');
 
-function toggleTipoVenda() {
-    if (tipoPeso.checked) {
-        inputConteudoQtd.value = '';
-        inputConteudoQtd.disabled = true;
-        selectConteudoUn.value = '';
-        selectConteudoUn.disabled = true;
-        labelEstoqueQtd.textContent = "Estoque Atual (Ex: 10 para 10kg)";
-        selectEstoqueUn.value = "2"; 
-    } else {
-        inputConteudoQtd.disabled = false;
-        selectConteudoUn.disabled = false;
-        labelEstoqueQtd.textContent = "Estoque Atual (Qtd em Unidades)";
-        selectEstoqueUn.value = "1"; 
-    }
-}
-tipoUnitario.addEventListener('change', toggleTipoVenda);
-tipoPeso.addEventListener('change', toggleTipoVenda);
-
-// ==========================================
-// LÓGICA DE UNIDADE: EDIÇÃO
-// ==========================================
-function toggleTipoVendaEdit() {
-    const isPeso = document.getElementById('edit_tipoPeso').checked;
-    const inputQtd = document.getElementById('edit_conteudo_quantidade');
-    const selectUn = document.getElementById('edit_conteudo_unidade_id');
-    const labelEst = document.getElementById('edit_label_estoque_qtd');
-    const selectEst = document.getElementById('edit_estoque_unidade_id');
-
-    if (isPeso) {
-        inputQtd.value = '';
-        inputQtd.disabled = true;
-        selectUn.value = '';
-        selectUn.disabled = true;
-        labelEst.textContent = "Estoque Atual (Ex: 10 para 10kg)";
-        selectEst.value = "2"; 
-    } else {
-        inputQtd.disabled = false;
-        selectUn.disabled = false;
-        labelEst.textContent = "Estoque Atual (Qtd em Unidades)";
-    }
-}
-
-// ==========================================
-// CARREGAR E RENDERIZAR
-// ==========================================
-async function carregarProdutos() {
-    const response = await fetch('/api/produtos', {
-        headers: { 'Authorization': `Bearer ${token}` }
-    });
-    
-    if(response.ok) {
-        todosOsProdutos = await response.json();
-        renderizarTabela(todosOsProdutos);
-        calcularKPIs(todosOsProdutos);
-    }
-}
-
-function renderizarTabela(lista) {
-    const tbody = document.getElementById('tabela-produtos');
-    tbody.innerHTML = '';
-    
-    if (lista.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center">Nenhum produto correspondente encontrado.</td></tr>';
-        return;
-    }
-
-    lista.forEach(p => {
-        const totalEstoqueValor = p.preco * p.estoque_quantidade;
-        const statusBadge = p.status === 'Ativo' 
-            ? '<span class="badge bg-success">Ativo</span>' 
-            : '<span class="badge bg-danger">Inativo</span>';
-
-        tbody.innerHTML += `
-            <tr>
-                <td>#${p.id}</td>
-                <td>
-                    <strong>${p.nome}</strong><br>
-                    <small class="text-muted">Cód: ${p.codigo_barras}</small>
-                </td>
-                <td>${formatarBRL(p.preco)}</td>
-                <td>${p.estoque_quantidade}</td>
-                <td class="fw-bold text-secondary">${formatarBRL(totalEstoqueValor)}</td>
-                <td>${statusBadge}</td>
-                <td>
-                    <button class="btn btn-sm btn-outline-primary" onclick="verDetalhes(${p.id})">🔍 Ver / Editar</button>
-                </td>
-            </tr>
-        `;
-    });
-}
-
-function calcularKPIs(lista) {
-    document.getElementById('kpi-total-itens').textContent = lista.length;
-    const valorTotal = lista.reduce((sum, p) => sum + (p.preco * p.estoque_quantidade), 0);
-    document.getElementById('kpi-valor-estoque').textContent = formatarBRL(valorTotal);
-}
-
-function filtrarProdutos() {
-    const termo = document.getElementById('filtroNome').value.toLowerCase();
-    const statusSel = document.getElementById('filtroStatus').value;
-
-    const filtrados = todosOsProdutos.filter(p => {
-        const bateNome = p.nome.toLowerCase().includes(termo) || p.codigo_barras.includes(termo);
-        const bateStatus = statusSel === 'Todos' || p.status === statusSel;
-        return bateNome && bateStatus;
-    });
-    renderizarTabela(filtrados);
-}
-
-// ==========================================
-// MODAL DE DETALHES
-// ==========================================
-function verDetalhes(id) {
-    const p = todosOsProdutos.find(item => item.id === id);
-    if (!p) return;
-
-    document.getElementById('detalhe-id').textContent = p.id;
-    document.getElementById('detalhe-nome').textContent = p.nome;
-    document.getElementById('detalhe-codigo').textContent = p.codigo_barras;
-    document.getElementById('detalhe-preco').textContent = formatarBRL(p.preco);
-    document.getElementById('detalhe-estoque').textContent = p.estoque_quantidade;
-    document.getElementById('detalhe-total-financeiro').textContent = formatarBRL(p.preco * p.estoque_quantidade);
-    document.getElementById('detalhe-imagem').src = p.imagem_path || 'https://via.placeholder.com/150';
-
-    const txtDinamico = document.getElementById('detalhe-exibicao-dinamica');
-    if (p.conteudo_quantidade) {
-        // Descobre a unidade correta com base no ID e na quantidade para ficar esteticamente correto
-        let unitDesc = 'un';
-        if (p.conteudo_unidade_id === 4) {
-            unitDesc = p.conteudo_quantidade >= 1 && p.conteudo_quantidade < 10 ? 'L' : 'ml';
-        } else if (p.conteudo_unidade_id === 2) {
-            unitDesc = p.conteudo_quantidade >= 1 && p.conteudo_quantidade < 10 ? 'kg' : 'g';
+    function toggleTipoVenda() {
+        if (tipoPeso.checked) {
+            inputConteudoQtd.value = '';
+            inputConteudoQtd.disabled = true;
+            selectConteudoUn.value = '';
+            selectConteudoUn.disabled = true;
+            labelEstoqueQtd.textContent = "Estoque Atual (Ex: 10 para 10kg)";
+            selectEstoqueUn.value = "2"; 
+        } else {
+            inputConteudoQtd.disabled = false;
+            selectConteudoUn.disabled = false;
+            labelEstoqueQtd.textContent = "Estoque Atual (Qtd em Unidades)";
+            selectEstoqueUn.value = "1"; 
         }
-        
-        txtDinamico.textContent = `"${p.estoque_quantidade} unidades de ${p.nome} de ${p.conteudo_quantidade}${unitDesc} cada - ${formatarBRL(p.preco)}"`;
-    } else {
-        // Se for por peso puro (A granel)
-        const unitEstoque = p.estoque_unidade_id === 4 ? 'L' : 'kg';
-        txtDinamico.textContent = `"${p.estoque_quantidade}${unitEstoque} de ${p.nome} - ${formatarBRL(p.preco)} o ${unitEstoque}"`;
+    }
+    tipoUnitario.addEventListener('change', toggleTipoVenda);
+    tipoPeso.addEventListener('change', toggleTipoVenda);
+
+    // ==========================================
+    // LÓGICA DE UNIDADE: EDIÇÃO
+    // ==========================================
+    function toggleTipoVendaEdit() {
+        const isPeso = document.getElementById('edit_tipoPeso').checked;
+        const inputQtd = document.getElementById('edit_conteudo_quantidade');
+        const selectUn = document.getElementById('edit_conteudo_unidade_id');
+        const labelEst = document.getElementById('edit_label_estoque_qtd');
+        const selectEst = document.getElementById('edit_estoque_unidade_id');
+
+        if (isPeso) {
+            inputQtd.value = '';
+            inputQtd.disabled = true;
+            selectUn.value = '';
+            selectUn.disabled = true;
+            labelEst.textContent = "Estoque Atual (Ex: 10 para 10kg)";
+            selectEst.value = "2"; 
+        } else {
+            inputQtd.disabled = false;
+            selectUn.disabled = false;
+            labelEst.textContent = "Estoque Atual (Qtd em Unidades)";
+        }
     }
 
-    const badgeContainer = document.getElementById('detalhe-status-badge');
-    const actionContainer = document.getElementById('container-acao-inativar');
-    
-    // Agora renderiza DOIS botões: Editar e Inativar
-    if (p.status === 'Ativo') {
-        badgeContainer.innerHTML = '<span class="badge bg-success fs-6">Ativo</span>';
-        actionContainer.innerHTML = `
-            <button class="btn btn-warning text-dark fw-bold" onclick="abrirEdicao(${p.id})">✏️ Editar</button>
-            <button class="btn btn-danger" onclick="inativar(${p.id})">Inativar Produto</button>
-        `;
-    } else {
-        badgeContainer.innerHTML = '<span class="badge bg-danger fs-6">Inativo</span>';
-        actionContainer.innerHTML = `
-            <button class="btn btn-warning text-dark fw-bold" onclick="abrirEdicao(${p.id})">✏️ Editar</button>
-            <button class="btn btn-secondary" disabled>Já Inativado</button>
-        `;
-    }
-
-    const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modalDetalhesProduto'));
-    modal.show();
-}
-
-// ==========================================
-// ABRIR MODAL DE EDIÇÃO
-// ==========================================
-function abrirEdicao(id) {
-    // 1. Fecha o modal de detalhes
-    bootstrap.Modal.getInstance(document.getElementById('modalDetalhesProduto')).hide();
-    
-    // 2. Acha o produto
-    const p = todosOsProdutos.find(item => item.id === id);
-    
-    // 3. Preenche os campos
-    document.getElementById('edit_id').value = p.id;
-    document.getElementById('edit_nome_produto').value = p.nome;
-    document.getElementById('edit_preco_produto').value = p.preco;
-    document.getElementById('edit_estoque_quantidade').value = p.estoque_quantidade;
-    document.getElementById('edit_estoque_unidade_id').value = p.estoque_unidade_id;
-    
-    if(p.conteudo_quantidade || p.conteudo_unidade_id) {
-        document.getElementById('edit_tipoUnitario').checked = true;
-        document.getElementById('edit_conteudo_quantidade').value = p.conteudo_quantidade;
-        document.getElementById('edit_conteudo_unidade_id').value = p.conteudo_unidade_id;
-    } else {
-        document.getElementById('edit_tipoPeso').checked = true;
-        document.getElementById('edit_conteudo_quantidade').value = '';
-        document.getElementById('edit_conteudo_unidade_id').value = '';
-    }
-    
-    // Arruma bloqueio dos campos visuais
-    toggleTipoVendaEdit();
-
-    // 4. Abre modal de edição
-    const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modalEditarProduto'));
-    modal.show();
-}
-
-// ==========================================
-// CADASTRAR PRODUTO (POST)
-// ==========================================
-document.getElementById('formProduto').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const formData = new FormData();
-    formData.append('nome', document.getElementById('nome_produto').value);
-    formData.append('preco', document.getElementById('preco_produto').value);
-    formData.append('estoque_quantidade', document.getElementById('estoque_quantidade').value);
-    formData.append('estoque_unidade_id', document.getElementById('estoque_unidade_id').value);
-    
-    const imgFile = document.getElementById('imagem_produto').files[0];
-    if (imgFile) formData.append('imagem', imgFile);
-
-    if (inputConteudoQtd.value) formData.append('conteudo_quantidade', inputConteudoQtd.value);
-    if (selectConteudoUn.value) formData.append('conteudo_unidade_id', selectConteudoUn.value);
-
-    const response = await fetch('/api/produtos', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
-        body: formData
-    });
-
-    if (response.ok) {
-        bootstrap.Modal.getInstance(document.getElementById('modalNovoProduto')).hide();
-        document.getElementById('formProduto').reset();
-        toggleTipoVenda();
-        carregarProdutos();
-    } else {
-        const data = await response.json();
-        const alertBox = document.getElementById('prod-alert');
-        alertBox.className = 'alert alert-danger';
-        alertBox.textContent = data.erro;
-        alertBox.classList.remove('d-none');
-    }
-});
-
-// ==========================================
-// SALVAR EDIÇÃO (PUT)
-// ==========================================
-document.getElementById('formEditarProduto').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const id = document.getElementById('edit_id').value;
-    const formData = new FormData();
-    formData.append('nome', document.getElementById('edit_nome_produto').value);
-    formData.append('preco', document.getElementById('edit_preco_produto').value);
-    formData.append('estoque_quantidade', document.getElementById('edit_estoque_quantidade').value);
-    formData.append('estoque_unidade_id', document.getElementById('edit_estoque_unidade_id').value);
-    
-    const imgFile = document.getElementById('edit_imagem_produto').files[0];
-    if (imgFile) formData.append('imagem', imgFile);
-
-    const isPeso = document.getElementById('edit_tipoPeso').checked;
-    if (!isPeso) {
-        formData.append('conteudo_quantidade', document.getElementById('edit_conteudo_quantidade').value);
-        formData.append('conteudo_unidade_id', document.getElementById('edit_conteudo_unidade_id').value);
-    } else {
-        // Envia vazio para apagar do banco
-        formData.append('conteudo_quantidade', '');
-        formData.append('conteudo_unidade_id', '');
-    }
-
-    const response = await fetch(`/api/produtos/${id}`, {
-        method: 'PUT',
-        headers: { 'Authorization': `Bearer ${token}` },
-        body: formData
-    });
-
-    if (response.ok) {
-        bootstrap.Modal.getInstance(document.getElementById('modalEditarProduto')).hide();
-        carregarProdutos();
-    } else {
-        const data = await response.json();
-        const alertBox = document.getElementById('edit-prod-alert');
-        alertBox.className = 'alert alert-danger';
-        alertBox.textContent = data.erro;
-        alertBox.classList.remove('d-none');
-    }
-});
-
-// ==========================================
-// INATIVAR
-// ==========================================
-async function inativar(id) {
-    if(confirm('Tem certeza que deseja inativar este produto? Ele sairá de circulação.')) {
-        const response = await fetch(`/api/produtos/${id}/inativar`, {
-            method: 'PUT',
+    // ==========================================
+    // CARREGAR E RENDERIZAR
+    // ==========================================
+    async function carregarProdutos() {
+        const response = await fetch('/api/produtos', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
-        if (response.ok) {
-            bootstrap.Modal.getInstance(document.getElementById('modalDetalhesProduto')).hide();
-            carregarProdutos();
+        if(response.ok) {
+            todosOsProdutos = await response.json();
+            renderizarTabela(todosOsProdutos);
+            calcularKPIs(todosOsProdutos);
         }
     }
-}
 
-document.addEventListener('DOMContentLoaded', carregarProdutos);
+    function renderizarTabela(lista) {
+        const tbody = document.getElementById('tabela-produtos');
+        tbody.innerHTML = '';
+        
+        if (lista.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center">Nenhum produto correspondente encontrado.</td></tr>';
+            return;
+        }
+
+        lista.forEach(p => {
+            const totalEstoqueValor = p.preco * p.estoque_quantidade;
+            const statusBadge = p.status === 'Ativo' 
+                ? '<span class="badge bg-success">Ativo</span>' 
+                : '<span class="badge bg-danger">Inativo</span>';
+
+            tbody.innerHTML += `
+                <tr>
+                    <td>#${p.id}</td>
+                    <td>
+                        <strong>${p.nome}</strong><br>
+                        <small class="text-muted">Cód: ${p.codigo_barras}</small>
+                    </td>
+                    <td>${formatarBRL(p.preco)}</td>
+                    <td>${p.estoque_quantidade}</td>
+                    <td class="fw-bold text-secondary">${formatarBRL(totalEstoqueValor)}</td>
+                    <td>${statusBadge}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary" onclick="verDetalhes(${p.id})">🔍 Ver / Editar</button>
+                    </td>
+                </tr>
+            `;
+        });
+    }
+
+    function calcularKPIs(lista) {
+        document.getElementById('kpi-total-itens').textContent = lista.length;
+        const valorTotal = lista.reduce((sum, p) => sum + (p.preco * p.estoque_quantidade), 0);
+        document.getElementById('kpi-valor-estoque').textContent = formatarBRL(valorTotal);
+    }
+
+    function filtrarProdutos() {
+        const termo = document.getElementById('filtroNome').value.toLowerCase();
+        const statusSel = document.getElementById('filtroStatus').value;
+
+        const filtrados = todosOsProdutos.filter(p => {
+            const bateNome = p.nome.toLowerCase().includes(termo) || p.codigo_barras.includes(termo);
+            const bateStatus = statusSel === 'Todos' || p.status === statusSel;
+            return bateNome && bateStatus;
+        });
+        renderizarTabela(filtrados);
+    }
+
+    // ==========================================
+    // MODAL DE DETALHES
+    // ==========================================
+    function verDetalhes(id) {
+        const p = todosOsProdutos.find(item => item.id === id);
+        if (!p) return;
+
+        document.getElementById('detalhe-id').textContent = p.id;
+        document.getElementById('detalhe-nome').textContent = p.nome;
+        document.getElementById('detalhe-codigo').textContent = p.codigo_barras;
+        document.getElementById('detalhe-preco').textContent = formatarBRL(p.preco);
+        document.getElementById('detalhe-estoque').textContent = p.estoque_quantidade;
+        document.getElementById('detalhe-total-financeiro').textContent = formatarBRL(p.preco * p.estoque_quantidade);
+        document.getElementById('detalhe-imagem').src = p.imagem_path || 'https://via.placeholder.com/150';
+
+        const txtDinamico = document.getElementById('detalhe-exibicao-dinamica');
+        if (p.conteudo_quantidade) {
+            let unitDesc = 'un';
+            if (p.conteudo_unidade_id === 4) {
+                unitDesc = p.conteudo_quantidade >= 1 && p.conteudo_quantidade < 10 ? 'L' : 'ml';
+            } else if (p.conteudo_unidade_id === 2) {
+                unitDesc = p.conteudo_quantidade >= 1 && p.conteudo_quantidade < 10 ? 'kg' : 'g';
+            }
+            
+            txtDinamico.textContent = `"${p.estoque_quantidade} unidades de ${p.nome} de ${p.conteudo_quantidade}${unitDesc} cada - ${formatarBRL(p.preco)}"`;
+        } else {
+            const unitEstoque = p.estoque_unidade_id === 4 ? 'L' : 'kg';
+            txtDinamico.textContent = `"${p.estoque_quantidade}${unitEstoque} de ${p.nome} - ${formatarBRL(p.preco)} o ${unitEstoque}"`;
+        }
+
+        const badgeContainer = document.getElementById('detalhe-status-badge');
+        const actionContainer = document.getElementById('container-acao-inativar');
+        
+        if (p.status === 'Ativo') {
+            badgeContainer.innerHTML = '<span class="badge bg-success fs-6">Ativo</span>';
+            actionContainer.innerHTML = `
+                <button class="btn btn-warning text-dark fw-bold" onclick="abrirEdicao(${p.id})">✏️ Editar</button>
+                <button class="btn btn-danger" onclick="inativar(${p.id})">Inativar Produto</button>
+            `;
+        } else {
+            badgeContainer.innerHTML = '<span class="badge bg-danger fs-6">Inativo</span>';
+            actionContainer.innerHTML = `
+                <button class="btn btn-warning text-dark fw-bold" onclick="abrirEdicao(${p.id})">✏️ Editar</button>
+                <button class="btn btn-secondary" disabled>Já Inativado</button>
+            `;
+        }
+
+        const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modalDetalhesProduto'));
+        modal.show();
+    }
+
+    // ==========================================
+    // ABRIR MODAL DE EDIÇÃO
+    // ==========================================
+    function abrirEdicao(id) {
+        // 1. Fecha o modal de detalhes
+        bootstrap.Modal.getInstance(document.getElementById('modalDetalhesProduto')).hide();
+        
+        // 2. Acha o produto
+        const p = todosOsProdutos.find(item => item.id === id);
+        
+        // 3. Preenche os campos
+        document.getElementById('edit_id').value = p.id;
+        document.getElementById('edit_nome_produto').value = p.nome;
+        document.getElementById('edit_preco_produto').value = p.preco;
+        document.getElementById('edit_estoque_quantidade').value = p.estoque_quantidade;
+        document.getElementById('edit_estoque_unidade_id').value = p.estoque_unidade_id;
+        
+        if(p.conteudo_quantidade || p.conteudo_unidade_id) {
+            document.getElementById('edit_tipoUnitario').checked = true;
+            document.getElementById('edit_conteudo_quantidade').value = p.conteudo_quantidade;
+            document.getElementById('edit_conteudo_unidade_id').value = p.conteudo_unidade_id;
+        } else {
+            document.getElementById('edit_tipoPeso').checked = true;
+            document.getElementById('edit_conteudo_quantidade').value = '';
+            document.getElementById('edit_conteudo_unidade_id').value = '';
+        }
+        
+        // Arruma bloqueio dos campos visuais
+        toggleTipoVendaEdit();
+
+        // 4. Abre modal de edição
+        const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modalEditarProduto'));
+        modal.show();
+    }
+
+    // ==========================================
+    // CADASTRAR PRODUTO (POST)
+    // ==========================================
+    document.getElementById('formProduto').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData();
+        formData.append('nome', document.getElementById('nome_produto').value);
+        formData.append('preco', document.getElementById('preco_produto').value);
+        formData.append('estoque_quantidade', document.getElementById('estoque_quantidade').value);
+        formData.append('estoque_unidade_id', document.getElementById('estoque_unidade_id').value);
+        
+        const imgFile = document.getElementById('imagem_produto').files[0];
+        if (imgFile) formData.append('imagem', imgFile);
+
+        if (inputConteudoQtd.value) formData.append('conteudo_quantidade', inputConteudoQtd.value);
+        if (selectConteudoUn.value) formData.append('conteudo_unidade_id', selectConteudoUn.value);
+
+        const response = await fetch('/api/produtos', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` },
+            body: formData
+        });
+
+        if (response.ok) {
+            bootstrap.Modal.getInstance(document.getElementById('modalNovoProduto')).hide();
+            document.getElementById('formProduto').reset();
+            toggleTipoVenda();
+            carregarProdutos();
+        } else {
+            const data = await response.json();
+            const alertBox = document.getElementById('prod-alert');
+            alertBox.className = 'alert alert-danger';
+            alertBox.textContent = data.erro;
+            alertBox.classList.remove('d-none');
+        }
+    });
+
+    // ==========================================
+    // SALVAR EDIÇÃO (PUT)
+    // ==========================================
+    document.getElementById('formEditarProduto').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const id = document.getElementById('edit_id').value;
+        const formData = new FormData();
+        formData.append('nome', document.getElementById('edit_nome_produto').value);
+        formData.append('preco', document.getElementById('edit_preco_produto').value);
+        formData.append('estoque_quantidade', document.getElementById('edit_estoque_quantidade').value);
+        formData.append('estoque_unidade_id', document.getElementById('edit_estoque_unidade_id').value);
+        
+        const imgFile = document.getElementById('edit_imagem_produto').files[0];
+        if (imgFile) formData.append('imagem', imgFile);
+
+        const isPeso = document.getElementById('edit_tipoPeso').checked;
+        if (!isPeso) {
+            formData.append('conteudo_quantidade', document.getElementById('edit_conteudo_quantidade').value);
+            formData.append('conteudo_unidade_id', document.getElementById('edit_conteudo_unidade_id').value);
+        } else {
+            formData.append('conteudo_quantidade', '');
+            formData.append('conteudo_unidade_id', '');
+        }
+
+        const response = await fetch(`/api/produtos/${id}`, {
+            method: 'PUT',
+            headers: { 'Authorization': `Bearer ${token}` },
+            body: formData
+        });
+
+        if (response.ok) {
+            bootstrap.Modal.getInstance(document.getElementById('modalEditarProduto')).hide();
+            carregarProdutos();
+        } else {
+            const data = await response.json();
+            const alertBox = document.getElementById('edit-prod-alert');
+            alertBox.className = 'alert alert-danger';
+            alertBox.textContent = data.erro;
+            alertBox.classList.remove('d-none');
+        }
+    });
+
+    // ==========================================
+    // INATIVAR
+    // ==========================================
+    async function inativar(id) {
+        if(confirm('Tem certeza que deseja inativar este produto? Ele sairá de circulação.')) {
+            const response = await fetch(`/api/produtos/${id}/inativar`, {
+                method: 'PUT',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            
+            if (response.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('modalDetalhesProduto')).hide();
+                carregarProdutos();
+            }
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', carregarProdutos);
 </script>
 {% endblock %}

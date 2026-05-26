@@ -61,98 +61,97 @@
 
 {% block scripts %}
 <script>
-// --- UTILITÁRIOS DE MÁSCARA E VISUALIZAÇÃO ---
-function togglePassword(inputId, btn) {
-    const input = document.getElementById(inputId);
-    if (input.type === 'password') {
-        input.type = 'text';
-        btn.textContent = '🙈';
-    } else {
-        input.type = 'password';
-        btn.textContent = '👁️';
+
+    function togglePassword(inputId, btn) {
+        const input = document.getElementById(inputId);
+        if (input.type === 'password') {
+            input.type = 'text';
+            btn.textContent = '🙈';
+        } else {
+            input.type = 'password';
+            btn.textContent = '👁️';
+        }
     }
-}
 
-document.getElementById('cnpj').addEventListener('input', function (e) {
-    let x = e.target.value.replace(/\D/g, '').match(/(\d{0,2})(\d{0,3})(\d{0,3})(\d{0,4})(\d{0,2})/);
-    e.target.value = !x[2] ? x[1] : x[1] + '.' + x[2] + (x[3] ? '.' : '') + x[3] + (x[4] ? '/' : '') + x[4] + (x[5] ? '-' + x[5] : '');
-});
-
-document.getElementById('celular').addEventListener('input', function (e) {
-    let v = e.target.value.replace(/\D/g, ''); // só números
-    if (v.length > 13) v = v.slice(0, 13); // limite para +55 11 99999-9999
-    let res = '';
-    if (v.length > 0) res += '+' + v.substring(0, 2);
-    if (v.length > 2) res += ' ' + v.substring(2, 4);
-    if (v.length > 4) res += ' ' + v.substring(4, 9);
-    if (v.length > 9) res += '-' + v.substring(9, 13);
-    e.target.value = res;
-});
-// ---------------------------------------------
-
-// Lógica de Cadastro
-document.getElementById('cadastroForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const btn = document.getElementById('btn-cadastrar');
-    btn.disabled = true;
-    btn.textContent = 'Enviando...';
-
-    const payload = {
-        name: document.getElementById('name').value,
-        cnpj: document.getElementById('cnpj').value.replace(/\D/g, ''), // Remove pontos e traços
-        email: document.getElementById('email').value,
-        celular: document.getElementById('celular').value.replace(/[^\d+]/g, ''), // Mantém apenas números e o +
-        password: document.getElementById('password').value
-    };
-
-    const response = await fetch('/criar', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    });
-    
-    const data = await response.json();
-    const alertBox = document.getElementById('cad-alert');
-
-    if (response.status === 201) {
-        document.getElementById('email_confirmacao').value = payload.email;
-        document.getElementById('step-cadastro').classList.add('d-none');
-        document.getElementById('step-ativacao').classList.remove('d-none');
-    } else {
-        alertBox.className = 'alert alert-danger';
-        alertBox.textContent = data.erro;
-        alertBox.classList.remove('d-none');
-        btn.disabled = false;
-        btn.textContent = 'Criar Conta';
-    }
-});
-
-// Lógica de Ativação
-document.getElementById('ativacaoForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const email = document.getElementById('email_confirmacao').value;
-    const codigo_ativacao = document.getElementById('codigo').value;
-    
-    const response = await fetch('/ativar', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, codigo_ativacao })
+    document.getElementById('cnpj').addEventListener('input', function (e) {
+        let x = e.target.value.replace(/\D/g, '').match(/(\d{0,2})(\d{0,3})(\d{0,3})(\d{0,4})(\d{0,2})/);
+        e.target.value = !x[2] ? x[1] : x[1] + '.' + x[2] + (x[3] ? '.' : '') + x[3] + (x[4] ? '/' : '') + x[4] + (x[5] ? '-' + x[5] : '');
     });
 
-    const data = await response.json();
-    const alertBox = document.getElementById('ativacao-alert');
+    document.getElementById('celular').addEventListener('input', function (e) {
+        let v = e.target.value.replace(/\D/g, '');
+        if (v.length > 13) v = v.slice(0, 13);
+        let res = '';
+        if (v.length > 0) res += '+' + v.substring(0, 2);
+        if (v.length > 2) res += ' ' + v.substring(2, 4);
+        if (v.length > 4) res += ' ' + v.substring(4, 9);
+        if (v.length > 9) res += '-' + v.substring(9, 13);
+        e.target.value = res;
+    });
 
-    if (response.status === 200) {
-        localStorage.setItem('token', data.token);
-        alertBox.className = 'alert alert-success';
-        alertBox.textContent = 'Conta ativada! Redirecionando para o Dashboard...';
-        alertBox.classList.remove('d-none');
-        setTimeout(() => { window.location.href = '/dashboard'; }, 1500);
-    } else {
-        alertBox.className = 'alert alert-danger';
-        alertBox.textContent = data.erro;
-        alertBox.classList.remove('d-none');
-    }
-});
+    // Lógica de Cadastro
+    document.getElementById('cadastroForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('btn-cadastrar');
+        btn.disabled = true;
+        btn.textContent = 'Enviando...';
+
+        const payload = {
+            name: document.getElementById('name').value,
+            cnpj: document.getElementById('cnpj').value.replace(/\D/g, ''),
+            email: document.getElementById('email').value,
+            celular: document.getElementById('celular').value.replace(/[^\d+]/g, ''),
+            password: document.getElementById('password').value
+        };
+
+        const response = await fetch('/criar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        
+        const data = await response.json();
+        const alertBox = document.getElementById('cad-alert');
+
+        if (response.status === 201) {
+            document.getElementById('email_confirmacao').value = payload.email;
+            document.getElementById('step-cadastro').classList.add('d-none');
+            document.getElementById('step-ativacao').classList.remove('d-none');
+        } else {
+            alertBox.className = 'alert alert-danger';
+            alertBox.textContent = data.erro;
+            alertBox.classList.remove('d-none');
+            btn.disabled = false;
+            btn.textContent = 'Criar Conta';
+        }
+    });
+
+    // Lógica de Ativação
+    document.getElementById('ativacaoForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('email_confirmacao').value;
+        const codigo_ativacao = document.getElementById('codigo').value;
+        
+        const response = await fetch('/ativar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, codigo_ativacao })
+        });
+
+        const data = await response.json();
+        const alertBox = document.getElementById('ativacao-alert');
+
+        if (response.status === 200) {
+            localStorage.setItem('token', data.token);
+            alertBox.className = 'alert alert-success';
+            alertBox.textContent = 'Conta ativada! Redirecionando para o Dashboard...';
+            alertBox.classList.remove('d-none');
+            setTimeout(() => { window.location.href = '/dashboard'; }, 1500);
+        } else {
+            alertBox.className = 'alert alert-danger';
+            alertBox.textContent = data.erro;
+            alertBox.classList.remove('d-none');
+        }
+    });
 </script>
 {% endblock %}

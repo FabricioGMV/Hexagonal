@@ -9,7 +9,7 @@ class Produto(db.Model):
     preco = db.Column(db.Float, nullable=False)
     estoque_quantidade = db.Column(db.Float, nullable=False)
     estoque_unidade_id = db.Column(db.Integer, db.ForeignKey('unidades.id'), nullable=False)
-    conteudo_quantidade = db.Column(db.Float, nullable=True) # Pode ser nulo se for vendido a granel/peso
+    conteudo_quantidade = db.Column(db.Float, nullable=True)
     conteudo_unidade_id = db.Column(db.Integer, db.ForeignKey('unidades.id'), nullable=True)
     status = db.Column(db.Boolean, default=True, nullable=False) 
     imagem_path = db.Column(db.String(255), nullable=True)
@@ -18,7 +18,6 @@ class Produto(db.Model):
 
     def __init__(self, **kwargs):
         super(Produto, self).__init__(**kwargs)
-        # Gera o código de barras automaticamente com prefixo 785
         if not self.codigo_barras:
             self.codigo_barras = f"785{random.randint(100000000, 999999999)}"
 

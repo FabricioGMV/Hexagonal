@@ -11,11 +11,9 @@ def seller_required():
         @wraps(f)
         def decorated_function(*args, **kwargs):
             try:
-                # Verifica se o JWT válido está presente no Header Authorization
                 verify_jwt_in_request()
                 user_id = get_jwt_identity()
                 
-                # Busca o estado atual do usuário no Banco
                 user = User.query.get(user_id)
                 if not user:
                     return make_response(jsonify({"erro": "Acesso negado. Usuário não encontrado."}), 404)

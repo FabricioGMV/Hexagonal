@@ -6,7 +6,6 @@ from src.Application.Service.venda_service import VendaService
 class VendaController:
     @staticmethod
     def realizar_venda():
-        # O Seller ID vem do token JWT de quem está logado
         seller_id = get_jwt_identity() 
         data = request.get_json()
         
@@ -23,7 +22,6 @@ class VendaController:
             }), 201)
             
         except ValueError as e:
-            # Captura as validações de Regra de Negócio (Estoque, Inativo)
             return make_response(jsonify({"erro": str(e)}), 400)
         except Exception as e:
             return make_response(jsonify({"erro": f"Erro interno: {str(e)}"}), 500)
